@@ -5,34 +5,19 @@ output: "../../config/output_files.yaml"
 
 default_container: "docker://hydragenetics/common:0.3.0"
 
-trimmer_software: "fastp_pe"
+trimmer_software: "None"
 
-bwa_mem:
-  container: "docker://hydragenetics/bwa_mem:0.7.17"
-  amb: "reference/hg19.chr6.fasta.amb"
-  ann: "reference/hg19.chr6.fasta.ann"
-  bwt: "reference/hg19.chr6.fasta.bwt"
-  pac: "reference/hg19.chr6.fasta.pac"
-  sa: "reference/hg19.chr6.fasta.sa"
+minimap2:
+  container: "docker://staphb/minimap2:2.24"
+  threads: 8
 
-fastp_pe:
-  container: "docker://hydragenetics/fastp:0.20.1"
-
-picard_mark_duplicates:
-  container: "docker://hydragenetics/picard:2.25.0"
-
-haplotypecaller:
-  container: "docker://hydragenetics/gatk4:4.1.9.0"
-  extra: "--dbsnp reference/dbsnp_138.sub.vcf.gz --standard-min-confidence-threshold-for-calling 1.0"
+clair3:
+  model_path: "/home/lars-ola-arvidsson/singularity_images/clair3_models/r941_prom_sup_g5014"
+  container: "/home/lars-ola-arvidsson/singularity_images/clair3.sif"
+  threads: 8
 
 get_padded_bed:
   padding: 100
-
-picard_mark_duplicates:
-  container: "docker://hydragenetics/picard:2.25.0"
-
-snv_indels_haplotypecaller:
-  container: "docker://hydragenetics/gatk4:4.1.9.0"
 
 variant_filtration:
   read_ratio: 0.2
