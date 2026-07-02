@@ -62,6 +62,7 @@ reference:
   fasta: "reference/hg19.chr6.fasta"
   fai: "reference/hg19.chr6.fasta.fai"
   dbsnp: "reference/dbsnp_138.sub.vcf.gz"
+  bwt: "reference/hg19.chr6.fasta.bwt"
 
 get_clinical_recommendations:
   analysed_variants: "reference/analysed_variants.txt"
