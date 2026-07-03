@@ -17,7 +17,8 @@ def filter_variants(vcf, read_ratio, depth, output):
         ad = record.samples[0]["AD"]
         #  No multiallelic split
 
-        if record.info["DP"] < depth:
+        dp = record.samples[0].get("DP") or record.info.get("DP", 0)
+        if dp < depth:
             record.filter.add("DP100")
 
         elif len(ad) == 2:

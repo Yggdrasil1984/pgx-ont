@@ -32,12 +32,16 @@ rule alignment_minimap2:
     shell:
         """
         if [ "{params.platform}" = "Illumina" ]; then
-            (bwa mem -t {threads} {input.ref} {input.fastq1} {input.fastq2} | \
-            samtools sort -o {output.bam} && \
-            samtools index {output.bam}) 2> {log}
+            (bwa mem -t {threads} \
+            -R '@RG\\tID:{wildcards.sample}_{wildcards.type}\\tSM:{wildcards.sample}_{wildcards.type}\\tPL:ILLUMINA\\tLB:{wildcards.sample}_{wildcards.type}' \
+            {input.ref} {input.fastq1} {input.fastq2} | \
+            /usr/bin/samtools sort -o {output.bam} && \
+            /usr/bin/samtools index {output.bam}) 2> {log}
         else
-            (minimap2 -ax map-ont -t {threads} {input.ref} {input.fastq1} | \
-            samtools sort -o {output.bam} && \
-            samtools index {output.bam}) 2> {log}
+            (minimap2 -ax map-ont -t {threads} \
+            -R '@RG\\tID:{wildcards.sample}_{wildcards.type}\\tSM:{wildcards.sample}_{wildcards.type}\\tPL:ONT\\tLB:{wildcards.sample}_{wildcards.type}' \
+            {input.ref} {input.fastq1} | \
+            /usr/bin/samtools sort -o {output.bam} && \
+            /usr/bin/samtools index {output.bam}) 2> {log}
         fi
         """

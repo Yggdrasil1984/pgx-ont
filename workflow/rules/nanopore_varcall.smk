@@ -1,3 +1,10 @@
+__author__ = "Lars-Ola Arvidsson"
+__copyright__ = "Copyright 2026, Lars-Ola Arvidsson"
+__email__ = "lars-ola.arvidsson@regionhalland.se"
+__license__ = "GPL-3"
+
+
+
 rule snv_indels_bed_split:
     input:
         bed = "pgx/reform_genomic_region/get_padded_bed/padded_bait_interval.bed"
@@ -38,6 +45,7 @@ rule snv_indels_haplotypecaller:
         "--threads={threads} "
         "--platform=ont "
         "--model_path={params.model} "
+        "--sample_name={wildcards.sample}_{wildcards.type} "
         "--output={params.workdir} && "
         "gunzip -c {params.workdir}/merge_output.vcf.gz > {output.vcf}) 2> {log}"
 
