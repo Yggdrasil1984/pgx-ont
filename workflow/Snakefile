@@ -14,8 +14,8 @@ include: "rules/get_clinical_guidelines.smk"
 include: "rules/get_target_variants.smk"
 include: "rules/variant_annotator.smk"
 include: "rules/variant_filtration.smk"
-include: "rules/nanopore_alignment.smk"
-include: "rules/nanopore_varcall.smk"
+include: "rules/ont_alignment.smk"
+include: "rules/ont_varcall.smk"
 
 
 report: "report/workflow.rst"

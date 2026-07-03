@@ -31,7 +31,7 @@ rule alignment_minimap2:
         "{rule}: align {input.fastq1} to {input.ref} using {params.platform} mode"
     shell:
         """
-        if [ "{params.platform}" = "Illumina" ]; then
+        if [ "{params.platform}" = "ONT" ]; then
             (bwa mem -t {threads} \
             -R '@RG\\tID:{wildcards.sample}_{wildcards.type}\\tSM:{wildcards.sample}_{wildcards.type}\\tPL:ILLUMINA\\tLB:{wildcards.sample}_{wildcards.type}' \
             {input.ref} {input.fastq1} {input.fastq2} | \

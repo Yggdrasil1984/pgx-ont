@@ -1,3 +1,3 @@
 sample	type	platform	barcode	machine	flowcell	lane	fastq1	fastq2	adapter
 HD832	T	Illumina	AGGGCGATAA+TTGTGTTCCT	@VH00694	AAAM3CNM5	L001	fastq/HD832_fastq1.fastq.gz	fastq/HD832_fastq2.fastq.gz	AGATCGGAAGAGCACACGTCTGAACTCCAGTCA,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
-NANOPORE	T	Nanopore	NANA	ONT001	ONT001	L001	fastq/nanopore_test.fastq.gz	fastq/nanopore_test.fastq.gz	AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+NANOPORE	T	ONT	NANA	ONT001	ONT001	L001	fastq/nanopore_test.fastq.gz	fastq/nanopore_test.fastq.gz	AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
