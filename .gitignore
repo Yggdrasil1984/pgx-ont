@@ -1,15 +1,22 @@
-.eggs
-__pycache__
-.snakemake/
-.tests/integration/.snakemake/
-describe_workflow.rst
-describe_jupyter_notebook.txt
-pgx/
-data/
-prealignment/
-alignment/
-snv_indels/
-logs/
-tmp/
+# sequencing data
+*.fastq.gz
+*.fq.gz
+*.bam
 *.bai
-*.tsv
+*.vcf.gz
+
+# snakemake
+.snakemake/
+work/
+results/
+
+# conda/envs
+.env/
+.conda/
+
+# apptainer/singularity
+*.sif
+
+# logs
+*.log
+logs/
