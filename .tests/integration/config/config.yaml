@@ -12,7 +12,7 @@ minimap2:
   threads: 8
 
 clair3:
-  model_path: "/home/lars-ola-arvidsson/singularity_images/clair3_models/r941_prom_sup_g5014"
+  model_path: "/opt/models/r1041_e82_400bps_sup_v410"
   container: "/home/lars-ola-arvidsson/singularity_images/clair3.sif"
   threads: 8
 
