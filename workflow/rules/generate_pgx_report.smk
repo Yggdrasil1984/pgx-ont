@@ -18,6 +18,7 @@ rule generate_pgx_report:
         dbsnp=config.get("reference", {}).get("dbsnp", ""),
         ref=config.get("reference", {}).get("fasta", ""),
         read_depth=config.get("variant_filtration", {}).get("read_depth", ""),
+        units_file=config.get("units", ""),
     log:
         "pgx/generate_pgx_report/{sample}_{type}.output.log",
     benchmark:

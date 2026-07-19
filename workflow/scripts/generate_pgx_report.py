@@ -91,16 +91,20 @@ def create_styled_clinical_recommendations(rekommendation):
 def generate_html_report(styled_depth_table, missing, template, dbsnp,
                          ref_path, rekommendation, analysed_variants,
                          detected_variants, haplotype_definitions,
-                         warning_depth, warning_rec):
+                         warning_depth, warning_rec, units):
     sample_column = missing.columns[3]
     sample = sample_column.split('_')[2]
     sample_id = sample_column.split('_')[3]
+    platform = units.loc[
+        units['sample'] == sample, 'platform'
+    ].iloc[0]
 
     with open(template, 'r') as f:
         template = jinja2.Template(source=f.read())
     styled_depth_report = template.render(
         sample=sample,
         sample_id=sample_id,
+        platform=platform,
         dbsnp=dbsnp,
         ref_path=ref_path,
         rekommendation=rekommendation.to_html(index=False),
@@ -122,10 +126,12 @@ if __name__ == "__main__":
     haplotype_definitions = snakemake.params.haplotype_definitions
     read_depth = snakemake.params.read_depth
     html_template = snakemake.params.html_template
+    units_file = snakemake.params.units_file
     depth_table = snakemake.output.depth_table
     html_report = snakemake.output.html_report
     recommendations = snakemake.input.recommendations
 
+    units = pd.read_csv(units_file, sep='\t', dtype=str)
     haplotype_definitions = pd.read_csv(haplotype_definitions, sep='\t')
     missed_variants = pd.read_csv(missed_variants, sep='\t')
     detected_variants = pd.read_csv(detected_variants, sep='\t')
@@ -152,7 +158,7 @@ if __name__ == "__main__":
     styled_depth_report = generate_html_report(
         styled_depth_table, missed_variants, html_template, dbsnp, ref,
         styled_rec, analysed_variants, detected_variants,
-        haplotype_definitions, warning_depth, warning_rec)
+        haplotype_definitions, warning_depth, warning_rec, units)
 
     with open(html_report, 'w') as w:
         w.write(styled_depth_report)
