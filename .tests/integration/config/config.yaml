@@ -71,9 +71,9 @@ generate_pgx_report:
   html_template: "reference/html_template.html"
 # ── StarPhase CYP2D6 diplotyping ─────────────────────────────────────────────
 starphase:
-  enabled: false   # set to true once the Apptainer image is ready
+  enabled: true   # set to true once the Apptainer image is ready
   container: "/home/lars-ola-arvidsson/singularity_images/starphase.sif"
   database: "/home/lars-ola-arvidsson/reference/starphase_db/pbstarphase_20251002.json"
-  reference: "/home/lars-ola-arvidsson/reference/chr22.fa"
+  reference: "/home/lars-ola-arvidsson/reference/GRCh38_chr.fasta"
   threads: 4
   bam_source: "pgx"

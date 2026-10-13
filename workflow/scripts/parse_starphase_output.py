@@ -45,7 +45,7 @@ import sys
 
 
 # ── Activity values per CPIC 2024 ────────────────────────────────────────────
-ACTIVITY_VALUE: dict[str, float] = {
+ACTIVITY_VALUE = {
     "*1":   1.0,
     "*2":   1.0,
     "*3":   0.0,
@@ -71,7 +71,7 @@ ACTIVITY_VALUE: dict[str, float] = {
 }
 
 
-def allele_activity(allele: str) -> float | None:
+def allele_activity(allele):
     """Return activity value for an allele string, or None if unknown."""
     # Try exact match first, then strip sub-allele suffix (e.g. *4.001 → *4)
     if allele in ACTIVITY_VALUE:
@@ -80,7 +80,7 @@ def allele_activity(allele: str) -> float | None:
     return ACTIVITY_VALUE.get(base, None)
 
 
-def activity_to_phenotype(score: float | None) -> str:
+def activity_to_phenotype(score):
     """Convert numeric activity score to CPIC phenotype string."""
     if score is None:
         return "Indeterminate"
@@ -93,7 +93,7 @@ def activity_to_phenotype(score: float | None) -> str:
     return "Ultrarapid Metaboliser (UM)"
 
 
-def cnv_status(hap1: str, hap2: str) -> tuple[str, str]:
+def cnv_status(hap1, hap2):
     """
     Detect copy number / structural variant status from the diplotype.
     Returns (cnv_status_code, human-readable note).
@@ -145,32 +145,23 @@ def extract_cyp2d6(starphase_json: dict, sample_name: str) -> dict:
         "cnv_note":       "No result from StarPhase",
     }
 
-    # Locate the sample block — StarPhase may use the BAM filename stem as the key
-    sample_results = starphase_json.get("sample_results", {})
-    if not sample_results:
-        print(f"WARNING: No sample_results found in StarPhase JSON", file=sys.stderr)
-        return result
-
-    # Try exact name, then first available key (single-sample runs)
-    sample_block = sample_results.get(sample_name)
-    if sample_block is None:
-        available = list(sample_results.keys())
-        if len(available) == 1:
-            sample_block = sample_results[available[0]]
-            print(
-                f"INFO: Sample key '{sample_name}' not found; "
-                f"using '{available[0]}' (only key present)",
-                file=sys.stderr,
-            )
-        else:
-            print(
-                f"ERROR: Sample '{sample_name}' not in StarPhase JSON. "
-                f"Available: {available}",
-                file=sys.stderr,
-            )
+    # v1.5.0: gene_details replaces the old sample_results wrapper
+    gene_details = starphase_json.get("gene_details", {})
+    if gene_details:
+        gene_block = gene_details.get("CYP2D6")
+    else:
+        # Legacy fallback for StarPhase < 1.5.0
+        sample_results = starphase_json.get("sample_results", {})
+        if not sample_results:
+            print("WARNING: No gene_details or sample_results found in StarPhase JSON", file=sys.stderr)
             return result
+        sample_block = sample_results.get(sample_name) or next(iter(sample_results.values()), None)
+        if sample_block is None:
+            print(f"ERROR: Sample '{sample_name}' not found in StarPhase JSON", file=sys.stderr)
+            return result
+        gene_block = sample_block.get("CYP2D6")
 
-    gene_block = sample_block.get("CYP2D6")
+    gene_block = gene_block  # v1.5.0 path sets gene_block directly
     if gene_block is None:
         print(f"WARNING: CYP2D6 not found in StarPhase output for {sample_name}", file=sys.stderr)
         result["cnv_note"] = "CYP2D6 not present in StarPhase result"
