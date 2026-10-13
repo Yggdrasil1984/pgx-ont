@@ -16,6 +16,7 @@ include: "rules/variant_annotator.smk"
 include: "rules/variant_filtration.smk"
 include: "rules/ont_alignment.smk"
 include: "rules/ont_varcall.smk"
+include: "rules/starphase_cyp2d6.smk"
 
 
 report: "report/workflow.rst"

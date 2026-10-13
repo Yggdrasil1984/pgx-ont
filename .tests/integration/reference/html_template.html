@@ -630,6 +630,7 @@ color: #faa21a;
     <li><a href="#läsdjup-vid-vildtyp-kliniska-targets">Läsdjup för kliniska positioner</a></li>
       <li><a href="#Analyserade-varianter">Analyserde varianter</a></li>
       <li><a href="#Haplotype">Haplotyper</a></li>
+      <li><a href="#CYP2D6">CYP2D6</a></li>
       </ul>
     </div> 
   </div>
@@ -732,6 +733,123 @@ Referensgenomens sökväg
 <div class="content">
 {{ haplotype_definitions }}
 
+</div>
+
+
+<div id="CYP2D6" class="section level1">
+<button class="collapsible">CYP2D6</button>
+<div class="content">
+
+<p>
+CYP2D6 kodifierar ett enzym som metaboliserar ungefär 25 % av alla
+vanliga läkemedel, inklusive kodein, tramadol, många antidepressiva
+(TCA, vissa SSRI) och tamoxifen. Genen befinner sig 4 kb från sin
+pseudogen CYP2D7, vilket gör genotypning med korta sekvenseringsläsningar
+opålitlig. Lång-läs-sekvensering möjliggör direkt upplösning av
+CYP2D6/CYP2D7 och detektion av strukturella varianter.
+</p>
+<p><em>Diplotypering utförd med pb-StarPhase v1.5.0 (BSD-3-Clause-Clear).</em></p>
+
+<h3>Diplotypresultat</h3>
+<table class="table table-striped" style="margin-left:auto;margin-right:auto;">
+<thead><tr>
+  <th>Gen</th><th>Diplotyp</th><th>Haplotyp 1</th><th>Haplotyp 2</th>
+  <th>Aktivitetspoäng</th><th>Fenotyp</th>
+</tr></thead>
+<tbody><tr>
+  <td><strong>CYP2D6</strong></td>
+  <td><strong>{{ cyp2d6.diplotype }}</strong></td>
+  <td>{{ cyp2d6.hap1 }}</td>
+  <td>{{ cyp2d6.hap2 }}</td>
+  <td>{{ cyp2d6.activity_score }}</td>
+  <td>
+    {% if cyp2d6.phenotype == "Poor Metaboliser (PM)" %}
+      <span style="color:#c0392b;font-weight:bold;">{{ cyp2d6.phenotype }}</span>
+    {% elif cyp2d6.phenotype == "Ultrarapid Metaboliser (UM)" %}
+      <span style="color:#e67e22;font-weight:bold;">{{ cyp2d6.phenotype }}</span>
+    {% elif cyp2d6.phenotype == "Intermediate Metaboliser (IM)" %}
+      <span style="color:#8e44ad;">{{ cyp2d6.phenotype }}</span>
+    {% else %}
+      {{ cyp2d6.phenotype }}
+    {% endif %}
+  </td>
+</tr></tbody>
+</table>
+
+<h3>Kopienummer och strukturella varianter</h3>
+<table class="table table-striped" style="margin-left:auto;margin-right:auto;">
+<thead><tr><th>Status</th><th>Kommentar</th></tr></thead>
+<tbody><tr>
+  <td>
+    {% if cyp2d6.cnv_status == "deletion" %}
+      <span style="color:#c0392b;font-weight:bold;">Gendeletion detekterad</span>
+    {% elif cyp2d6.cnv_status == "duplication" %}
+      <span style="color:#e67e22;font-weight:bold;">Genduplicering detekterad</span>
+    {% elif cyp2d6.cnv_status == "del+dup" %}
+      <span style="color:#c0392b;font-weight:bold;">Deletion + duplicering</span>
+    {% elif cyp2d6.cnv_status == "normal" %}
+      Normalt kopienummer (2 kopior)
+    {% else %}
+      Okänt
+    {% endif %}
+  </td>
+  <td>{{ cyp2d6.cnv_note }}</td>
+</tr></tbody>
+</table>
+
+<h3>Klinisk tolkning</h3>
+
+{% if cyp2d6.phenotype == "Poor Metaboliser (PM)" %}
+<div style="border-left:4px solid #c0392b;padding:0.8em 1em;background:#fdf3f3;margin:1em 0;">
+  <strong>Poor Metaboliser (PM) — Aktivitetspoäng {{ cyp2d6.activity_score }}</strong><br>
+  Patienten saknar funktionell CYP2D6-aktivitet. Prodrugs (t.ex. kodein, tramadol)
+  ger ingen terapeutisk effekt. Substrat ackumuleras till toxiska nivåer.<br><br>
+  <em>Rekommendation: Undvik CYP2D6-beroende prodrugs. Reducera dos av CYP2D6-substrat
+  eller välj alternativa läkemedel. Se CPIC-riktlinjer.</em>
+</div>
+{% elif cyp2d6.phenotype == "Ultrarapid Metaboliser (UM)" %}
+<div style="border-left:4px solid #e67e22;padding:0.8em 1em;background:#fef9f0;margin:1em 0;">
+  <strong>Ultrarapid Metaboliser (UM) — Aktivitetspoäng {{ cyp2d6.activity_score }}</strong><br>
+  Patienten har ökad CYP2D6-aktivitet. Substrat metaboliseras snabbare — subterapeutiska
+  plasmakoncentrationer vid standarddos. Prodrugs kan ge toxicitet via ökad aktivering.<br><br>
+  <em>Rekommendation: Undvik CYP2D6-aktiverade prodrugs. Överväg högre doser eller
+  alternativa läkemedel. Se CPIC-riktlinjer.</em>
+</div>
+{% elif cyp2d6.phenotype == "Intermediate Metaboliser (IM)" %}
+<div style="border-left:4px solid #8e44ad;padding:0.8em 1em;background:#f9f4fc;margin:1em 0;">
+  <strong>Intermediate Metaboliser (IM) — Aktivitetspoäng {{ cyp2d6.activity_score }}</strong><br>
+  Reducerad CYP2D6-aktivitet. Dosanpassning kan vara aktuell. Se CPIC-riktlinjer.
+</div>
+{% elif cyp2d6.phenotype == "Normal Metaboliser (NM)" %}
+<p><strong>Normal Metaboliser (NM) — Aktivitetspoäng {{ cyp2d6.activity_score }}</strong><br>
+Normal CYP2D6-aktivitet. Standarddosering förväntas ge terapeutisk effekt.</p>
+{% else %}
+<p><em>Fenotypen kunde inte fastställas (aktivitetspoäng: {{ cyp2d6.activity_score }}).
+Manuell granskning rekommenderas.</em></p>
+{% endif %}
+
+<h3>Aktivitetspoäng — referenstabell (CPIC 2024)</h3>
+<table class="table table-striped" style="margin-left:auto;margin-right:auto;">
+<thead><tr><th>Aktivitetspoäng</th><th>Fenotyp</th><th>Klinisk konsekvens</th></tr></thead>
+<tbody>
+<tr><td>0.0</td><td style="color:#c0392b;font-weight:bold;">Poor Metaboliser (PM)</td>
+    <td>Ingen CYP2D6-aktivitet — prodrugs ineffektiva, substrat ackumuleras</td></tr>
+<tr><td>0.25 – 1.0</td><td style="color:#8e44ad;">Intermediate Metaboliser (IM)</td>
+    <td>Reducerad aktivitet — dosanpassning kan behövas</td></tr>
+<tr><td>1.25 – 2.25</td><td>Normal Metaboliser (NM)</td>
+    <td>Normal aktivitet — standarddosering rekommenderas</td></tr>
+<tr><td>≥ 2.5</td><td style="color:#e67e22;font-weight:bold;">Ultrarapid Metaboliser (UM)</td>
+    <td>Ökad aktivitet (duplikation) — standarddos kan ge subterapeutisk effekt</td></tr>
+</tbody>
+</table>
+
+<p style="font-size:0.85em;color:#666;margin-top:1.5em;">
+Diplotypering: pb-StarPhase v1.5.0 med CPIC-databas 2025-10-02 (PharmVar 6.2.15).
+Aktivitetspoäng och fenotypklassificering enligt CPIC Guideline for CYP2D6 (2024).
+Denna analys ersätter inte klinisk bedömning.
+</p>
+
+</div>
 </div>
 
 

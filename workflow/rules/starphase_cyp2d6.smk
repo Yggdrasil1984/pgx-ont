@@ -1,0 +1,151 @@
+# starphase_cyp2d6.smk
+# ──────────────────────────────────────────────────────────────────────────────
+# Snakemake rules for CYP2D6 paralog-aware diplotyping using pb-StarPhase.
+#
+# These rules sit between the alignment/variant-calling layer (nallo or Clair3)
+# and the clinical report generation step.
+#
+# PREREQUISITES (must exist in config.yaml):
+#   starphase:
+#     container:  "/home/your-username/singularity_images/starphase.sif"
+#     database:   "/home/your-username/reference/starphase_db/pbstarphase_20251002.json"
+#     reference:  "/home/your-username/reference/chr22.fa"   # GRCh38 chr22
+#     threads:    4
+#
+# INPUT FILES REQUIRED PER SAMPLE:
+#   - A haplotagged BAM: produced by nallo (preferred) or WhatsHap haplotagging
+#     of the Clair3/minimap2 BAM.  See config key starphase.bam_pattern below.
+#   - A phased SNV VCF: produced by nallo DeepVariant+WhatsHap, or by the
+#     standard pgx Clair3 pipeline (unphased is also accepted by StarPhase).
+#
+# OUTPUT:
+#   results/starphase/{sample}_{type}_starphase.json    — full StarPhase JSON
+#   results/starphase/{sample}_{type}_cyp2d6_result.csv — parsed CYP2D6 result
+#     (columns: sample,gene,diplotype,hap1,hap2,activity_score,phenotype,
+#                cnv_status,cnv_note)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+# ── Helper: resolve BAM path ──────────────────────────────────────────────────
+# The BAM source depends on whether nallo was run (preferred haplotagged BAM)
+# or the pipeline uses its own Clair3 BAM.  Configure in config.yaml:
+#
+#   starphase:
+#     bam_source: "nallo"        # use nallo haplotagged BAM
+#     nallo_outdir: "/path/to/nallo_results"
+#   OR
+#     bam_source: "pgx"          # use pgx alignment BAM (from ont_alignment.smk)
+#
+# Default: pgx (no nallo required — works with current Chapter 2/3 setup).
+
+
+def starphase_bam(wildcards):
+    """Return the BAM path for StarPhase based on bam_source config."""
+    source = config.get("starphase", {}).get("bam_source", "pgx")
+    if source == "nallo":
+        nallo_dir = config["starphase"]["nallo_outdir"]
+        return (
+            f"{nallo_dir}/aligned_reads/sample/"
+            f"{wildcards.sample}_{wildcards.type}/"
+            f"{wildcards.sample}_{wildcards.type}_haplotagged.bam"
+        )
+    # Default: pgx alignment BAM (from ont_alignment.smk)
+    return f"alignment/samtools_merge_bam/{wildcards.sample}_{wildcards.type}.bam"
+
+
+def starphase_bai(wildcards):
+    return starphase_bam(wildcards) + ".bai"
+
+
+def starphase_vcf(wildcards):
+    """Return the VCF path for StarPhase."""
+    source = config.get("starphase", {}).get("bam_source", "pgx")
+    if source == "nallo":
+        nallo_dir = config["starphase"]["nallo_outdir"]
+        return (
+            f"{nallo_dir}/snvs/sample/"
+            f"{wildcards.sample}_{wildcards.type}/"
+            f"{wildcards.sample}_{wildcards.type}_deepvariant_snvs.vcf.gz"
+        )
+    # Default: pgx Clair3 merged VCF
+    return (
+        f"snv_indels/haplotypecaller/"
+        f"{wildcards.sample}_{wildcards.type}.merged.vcf.gz"
+    )
+
+
+# ── Rule 1: run StarPhase diplotype ──────────────────────────────────────────
+rule starphase_diplotype:
+    """
+    Run pb-StarPhase to call CYP2D6 (and other CPIC Level A genes) from a
+    haplotagged BAM + phased VCF.
+
+    StarPhase needs:
+      --bam        haplotagged BAM (WhatsHap or nallo LongPhase)
+      --vcf        phased SNV VCF (gzipped, tabix-indexed)
+      --reference  GRCh38 chromosome FASTA (chr22 minimum for CYP2D6)
+      --database   pre-built StarPhase JSON database
+      --output-dir directory to write results into
+
+    The output JSON is named <sample>.json inside that directory.
+    We rename it to a deterministic path for downstream rules.
+    """
+    input:
+        bam  = starphase_bam,
+        bai  = starphase_bai,
+        vcf  = starphase_vcf,
+        ref  = config["starphase"]["reference"],
+        db   = config["starphase"]["database"],
+    output:
+        json = "results/starphase/{sample}_{type}_starphase.json",
+    params:
+        outdir   = "results/starphase/{sample}_{type}_starphase_tmp",
+        threads  = config["starphase"].get("threads", 4),
+        sif      = config["starphase"]["container"],
+    log:
+        "logs/starphase/{sample}_{type}_diplotype.log",
+    shell:
+        """
+        mkdir -p {params.outdir}
+
+        apptainer exec {params.sif} pbstarphase diplotype \\
+            --bam        {input.bam}  \\
+            --vcf        {input.vcf}  \\
+            --reference  {input.ref}  \\
+            --database   {input.db}   \\
+            --output-dir {params.outdir} \\
+            --threads    {params.threads} \\
+            > {log} 2>&1
+
+        # StarPhase writes <sample>.json — copy to our named output
+        # The JSON stem matches the SM: tag in the BAM read group
+        JSON_FILE=$(ls {params.outdir}/*.json | head -1)
+        cp "$JSON_FILE" {output.json}
+
+        echo "StarPhase JSON written to {output.json}" >> {log}
+        """
+
+
+# ── Rule 2: parse StarPhase JSON → CYP2D6 CSV ────────────────────────────────
+rule starphase_parse_cyp2d6:
+    """
+    Extract CYP2D6 diplotype, phenotype, activity score, and CNV status
+    from the StarPhase JSON into a one-row CSV for the report generator.
+    """
+    input:
+        json = "results/starphase/{sample}_{type}_starphase.json",
+    output:
+        csv  = "results/starphase/{sample}_{type}_cyp2d6_result.csv",
+    params:
+        sample_name = "{sample}_{type}",
+        script      = workflow.basedir + "/scripts/parse_starphase_output.py",
+    log:
+        "logs/starphase/{sample}_{type}_parse.log",
+    shell:
+        """
+        python {params.script} \\
+            --json   {input.json} \\
+            --sample {params.sample_name} \\
+            --output {output.csv} \\
+            > {log} 2>&1
+        """

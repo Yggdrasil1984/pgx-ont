@@ -19,6 +19,11 @@ rule generate_pgx_report:
         ref=config.get("reference", {}).get("fasta", ""),
         read_depth=config.get("variant_filtration", {}).get("read_depth", ""),
         units_file=config.get("units", ""),
+        starphase_csv=lambda wc: (
+            f"pgx/starphase/{wc.sample}_{wc.type}_cyp2d6_result.csv"
+            if config.get("starphase", {}).get("enabled", False)
+            else None
+        ),
     log:
         "pgx/generate_pgx_report/{sample}_{type}.output.log",
     benchmark:

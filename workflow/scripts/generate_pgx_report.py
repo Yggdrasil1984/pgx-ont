@@ -9,6 +9,41 @@ import pandas as pd
 import jinja2
 
 
+
+def load_cyp2d6_result(csv_path):
+    """Load CYP2D6 diplotype result from StarPhase CSV."""
+    empty = {
+        "diplotype":      "Not determined",
+        "hap1":           ".",
+        "hap2":           ".",
+        "activity_score": ".",
+        "phenotype":      "Indeterminate",
+        "cnv_status":     "unknown",
+        "cnv_note":       "",
+    }
+    if csv_path is None:
+        return empty
+    try:
+        import csv as csv_module
+        with open(csv_path, newline="") as fh:
+            reader = csv_module.DictReader(fh)
+            rows = list(reader)
+        if not rows:
+            return empty
+        row = rows[0]
+        return {
+            "diplotype":      row.get("diplotype", "Not determined"),
+            "hap1":           row.get("hap1", "."),
+            "hap2":           row.get("hap2", "."),
+            "activity_score": row.get("activity_score", "."),
+            "phenotype":      row.get("phenotype", "Indeterminate"),
+            "cnv_status":     row.get("cnv_status", "unknown"),
+            "cnv_note":       row.get("cnv_note", ""),
+        }
+    except Exception as exc:
+        print(f"WARNING: Could not load StarPhase CSV {csv_path}: {exc}")
+        return empty
+
 def highlight_greaterthan(s, threshold, column):
     is_max = pd.Series(data=False, index=s.index)
     is_max[column] = s.loc[column] < threshold
@@ -91,7 +126,7 @@ def create_styled_clinical_recommendations(rekommendation):
 def generate_html_report(styled_depth_table, missing, template, dbsnp,
                          ref_path, rekommendation, analysed_variants,
                          detected_variants, haplotype_definitions,
-                         warning_depth, warning_rec, units):
+                         warning_depth, warning_rec, units, cyp2d6=None):
     sample_column = missing.columns[3]
     sample = sample_column.split('_')[2]
     sample_id = sample_column.split('_')[3]
@@ -113,7 +148,8 @@ def generate_html_report(styled_depth_table, missing, template, dbsnp,
         haplotype_definitions=haplotype_definitions.to_html(index=False),
         table=styled_depth_table.set_uuid('läsdjup').to_html(index=False),
         warning_depth=warning_depth,
-        warning_rec=warning_rec)
+        warning_rec=warning_rec,
+        cyp2d6=cyp2d6 if cyp2d6 is not None else load_cyp2d6_result(None))
 
     return styled_depth_report
 
@@ -127,6 +163,7 @@ if __name__ == "__main__":
     read_depth = snakemake.params.read_depth
     html_template = snakemake.params.html_template
     units_file = snakemake.params.units_file
+    starphase_csv = snakemake.params.get('starphase_csv', None)
     depth_table = snakemake.output.depth_table
     html_report = snakemake.output.html_report
     recommendations = snakemake.input.recommendations
@@ -158,7 +195,8 @@ if __name__ == "__main__":
     styled_depth_report = generate_html_report(
         styled_depth_table, missed_variants, html_template, dbsnp, ref,
         styled_rec, analysed_variants, detected_variants,
-        haplotype_definitions, warning_depth, warning_rec, units)
+        haplotype_definitions, warning_depth, warning_rec, units,
+        cyp2d6=load_cyp2d6_result(starphase_csv))
 
     with open(html_report, 'w') as w:
         w.write(styled_depth_report)
