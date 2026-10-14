@@ -163,7 +163,7 @@ if __name__ == "__main__":
     read_depth = snakemake.params.read_depth
     html_template = snakemake.params.html_template
     units_file = snakemake.params.units_file
-    starphase_csv = snakemake.params.get('starphase_csv', None)
+    starphase_csv = getattr(snakemake.input, 'starphase_csv', None)
     depth_table = snakemake.output.depth_table
     html_report = snakemake.output.html_report
     recommendations = snakemake.input.recommendations

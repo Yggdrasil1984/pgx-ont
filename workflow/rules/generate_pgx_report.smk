@@ -9,6 +9,8 @@ rule generate_pgx_report:
         missed_variants="pgx/append_id_to_gdf/{sample}_{type}.depth_at_missing_annotated.gdf",
         recommendations="pgx/get_clinical_recommendations/{sample}_{type}_pgx_clinical_recommendations.txt",
         detected_variants="pgx/detected_variants/{sample}_{type}.annotated.csv",
+        **( {"starphase_csv": "results/starphase/{sample}_{type}_cyp2d6_result.csv"}
+            if config.get("starphase", {}).get("enabled", False) else {} ),
     output:
         html_report=temp("pgx/generate_pgx_report/{sample}_{type}_pgx_report.html"),
         depth_table=temp("pgx/generate_pgx_report/{sample}_{type}_pgx_depth_table.xlsx"),
@@ -19,11 +21,7 @@ rule generate_pgx_report:
         ref=config.get("reference", {}).get("fasta", ""),
         read_depth=config.get("variant_filtration", {}).get("read_depth", ""),
         units_file=config.get("units", ""),
-        starphase_csv=lambda wc: (
-            f"pgx/starphase/{wc.sample}_{wc.type}_cyp2d6_result.csv"
-            if config.get("starphase", {}).get("enabled", False)
-            else None
-        ),
+
     log:
         "pgx/generate_pgx_report/{sample}_{type}.output.log",
     benchmark:
