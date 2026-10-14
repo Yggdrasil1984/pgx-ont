@@ -39,6 +39,10 @@
 # Default: pgx (no nallo required — works with current Chapter 2/3 setup).
 
 
+# ── Enabled guard ────────────────────────────────────────────────────────────
+_starphase_enabled = config.get("starphase", {}).get("enabled", False)
+
+
 def starphase_bam(wildcards):
     """Return the BAM path for StarPhase based on bam_source config."""
     source = config.get("starphase", {}).get("bam_source", "pgx")
@@ -75,77 +79,79 @@ def starphase_vcf(wildcards):
 
 
 # ── Rule 1: run StarPhase diplotype ──────────────────────────────────────────
-rule starphase_diplotype:
-    """
-    Run pb-StarPhase to call CYP2D6 (and other CPIC Level A genes) from a
-    haplotagged BAM + phased VCF.
+if _starphase_enabled:
 
-    StarPhase needs:
-      --bam        haplotagged BAM (WhatsHap or nallo LongPhase)
-      --vcf        phased SNV VCF (gzipped, tabix-indexed)
-      --reference  GRCh38 chromosome FASTA (chr22 minimum for CYP2D6)
-      --database   pre-built StarPhase JSON database
-      --output-dir directory to write results into
-
-    The output JSON is named <sample>.json inside that directory.
-    We rename it to a deterministic path for downstream rules.
-    """
-    input:
-        bam  = starphase_bam,
-        bai  = starphase_bai,
-        vcf  = starphase_vcf,
-        ref  = config["starphase"]["reference"],
-        db   = config["starphase"]["database"],
-    output:
-        json = "results/starphase/{sample}_{type}_starphase.json",
-    params:
-        outdir   = "results/starphase/{sample}_{type}_starphase_tmp",
-        threads  = config["starphase"].get("threads", 4),
-        sif      = config["starphase"]["container"],
-    log:
-        "logs/starphase/{sample}_{type}_diplotype.log",
-    shell:
+    rule starphase_diplotype:
         """
-        mkdir -p {params.outdir}
+        Run pb-StarPhase to call CYP2D6 (and other CPIC Level A genes) from a
+        haplotagged BAM + phased VCF.
 
-        apptainer exec {params.sif} pbstarphase diplotype \\
-            --bam        {input.bam}  \\
-            --vcf        {input.vcf}  \\
-            --reference  {input.ref}  \\
-            --database   {input.db}   \\
-            --output-dir {params.outdir} \\
-            --threads    {params.threads} \\
-            > {log} 2>&1
+        StarPhase needs:
+          --bam        haplotagged BAM (WhatsHap or nallo LongPhase)
+          --vcf        phased SNV VCF (gzipped, tabix-indexed)
+          --reference  GRCh38 chromosome FASTA (chr22 minimum for CYP2D6)
+          --database   pre-built StarPhase JSON database
+          --output-dir directory to write results into
 
-        # StarPhase writes <sample>.json — copy to our named output
-        # The JSON stem matches the SM: tag in the BAM read group
-        JSON_FILE=$(ls {params.outdir}/*.json | head -1)
-        cp "$JSON_FILE" {output.json}
-
-        echo "StarPhase JSON written to {output.json}" >> {log}
+        The output JSON is named <sample>.json inside that directory.
+        We rename it to a deterministic path for downstream rules.
         """
+        input:
+            bam  = starphase_bam,
+            bai  = starphase_bai,
+            vcf  = starphase_vcf,
+            ref  = config["starphase"]["reference"],
+            db   = config["starphase"]["database"],
+        output:
+            json = "results/starphase/{sample}_{type}_starphase.json",
+        params:
+            outdir   = "results/starphase/{sample}_{type}_starphase_tmp",
+            threads  = config["starphase"].get("threads", 4),
+            sif      = config["starphase"]["container"],
+        log:
+            "logs/starphase/{sample}_{type}_diplotype.log",
+        shell:
+            """
+            mkdir -p {params.outdir}
+
+            apptainer exec {params.sif} pbstarphase diplotype \\
+                --bam        {input.bam}  \\
+                --vcf        {input.vcf}  \\
+                --reference  {input.ref}  \\
+                --database   {input.db}   \\
+                --output-dir {params.outdir} \\
+                --threads    {params.threads} \\
+                > {log} 2>&1
+
+            # StarPhase writes <sample>.json — copy to our named output
+            # The JSON stem matches the SM: tag in the BAM read group
+            JSON_FILE=$(ls {params.outdir}/*.json | head -1)
+            cp "$JSON_FILE" {output.json}
+
+            echo "StarPhase JSON written to {output.json}" >> {log}
+            """
 
 
-# ── Rule 2: parse StarPhase JSON → CYP2D6 CSV ────────────────────────────────
-rule starphase_parse_cyp2d6:
-    """
-    Extract CYP2D6 diplotype, phenotype, activity score, and CNV status
-    from the StarPhase JSON into a one-row CSV for the report generator.
-    """
-    input:
-        json = "results/starphase/{sample}_{type}_starphase.json",
-    output:
-        csv  = "results/starphase/{sample}_{type}_cyp2d6_result.csv",
-    params:
-        sample_name = "{sample}_{type}",
-        script      = workflow.basedir + "/scripts/parse_starphase_output.py",
-    log:
-        "logs/starphase/{sample}_{type}_parse.log",
-    shell:
+    # ── Rule 2: parse StarPhase JSON → CYP2D6 CSV ────────────────────────────────
+    rule starphase_parse_cyp2d6:
         """
-        python {params.script} \\
-            --json   {input.json} \\
-            --sample {params.sample_name} \\
-            --output {output.csv} \\
-            > {log} 2>&1
+        Extract CYP2D6 diplotype, phenotype, activity score, and CNV status
+        from the StarPhase JSON into a one-row CSV for the report generator.
         """
+        input:
+            json = "results/starphase/{sample}_{type}_starphase.json",
+        output:
+            csv  = "results/starphase/{sample}_{type}_cyp2d6_result.csv",
+        params:
+            sample_name = "{sample}_{type}",
+            script      = workflow.basedir + "/scripts/parse_starphase_output.py",
+        log:
+            "logs/starphase/{sample}_{type}_parse.log",
+        shell:
+            """
+            python {params.script} \\
+                --json   {input.json} \\
+                --sample {params.sample_name} \\
+                --output {output.csv} \\
+                > {log} 2>&1
+            """

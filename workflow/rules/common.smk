@@ -51,6 +51,23 @@ with open(config["output"]) as output:
 
 validate(output_spec, schema="../schemas/output_files.schema.yaml")
 
+# Conditionally add StarPhase outputs when enabled
+if config.get("starphase", {}).get("enabled", False):
+    output_spec["files"].extend([
+        {
+            "name": "_copy_cyp2d6_result",
+            "input": "results/starphase/{sample}_{type}_cyp2d6_result.csv",
+            "output": "results/dna/pgx/additional_files/{sample}_{type}.cyp2d6_result.csv",
+            "types": ["T", "N"],
+        },
+        {
+            "name": "_copy_starphase_json",
+            "input": "results/starphase/{sample}_{type}_starphase.json",
+            "output": "results/dna/pgx/additional_files/{sample}_{type}.starphase.json",
+            "types": ["T", "N"],
+        },
+    ])
+
 
 # Reading choromosomes from design bed file
 def get_choromosomes(genomic_regions: pd.DataFrame) -> typing.List[str]:

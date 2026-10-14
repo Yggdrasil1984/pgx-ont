@@ -12,7 +12,7 @@ Usage (called by Snakemake rule starphase_cyp2d6):
         --output results/starphase/{sample}_T_cyp2d6_result.csv
 
 Output CSV (one row, no index):
-    sample,gene,diplotype,hap1,hap2,activity_score,phenotype,cnv_status,cnv_note
+    sample,gene,diplotype,hap1,hap2,activity_score,phenotype,cnv_status,cnv_note,raw_haplotypes
     HD832_T,CYP2D6,*5/*4,*5,*4,0.0,Poor Metaboliser,deletion,Gene deletion on one allele (*5)
 
 Activity score rules (CPIC 2024):
@@ -143,6 +143,7 @@ def extract_cyp2d6(starphase_json: dict, sample_name: str) -> dict:
         "phenotype":      "Indeterminate",
         "cnv_status":     "unknown",
         "cnv_note":       "No result from StarPhase",
+        "raw_haplotypes": "{}",
     }
 
     # v1.5.0: gene_details replaces the old sample_results wrapper
@@ -198,6 +199,7 @@ def extract_cyp2d6(starphase_json: dict, sample_name: str) -> dict:
         phenotype      = phenotype,
         cnv_status     = cnv_code,
         cnv_note       = cnv_note,
+        raw_haplotypes = json.dumps(gene_block, separators=(",", ":")),
     )
     return result
 
@@ -217,6 +219,7 @@ def main() -> None:
     fieldnames = [
         "sample", "gene", "diplotype", "hap1", "hap2",
         "activity_score", "phenotype", "cnv_status", "cnv_note",
+        "raw_haplotypes",
     ]
     with open(args.output, "w", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
