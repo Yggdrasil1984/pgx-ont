@@ -93,4 +93,4 @@ starphase:
   container: "/home/lars-ola-arvidsson/singularity_images/starphase.sif"
   database: "/home/lars-ola-arvidsson/reference/starphase_db/pbstarphase_20251002.json"
   reference: "/home/lars-ola-arvidsson/reference/GRCh38_chr.fasta"
-  bam_source: "pgx"  # "pgx" = this pipeline's BAM/VCF; "nallo" = nallo output (needs nallo_outdir)
+  bam_source: "pgx"  # "pgx" = this pipeline's BAM/VCF; "nallo" = nallo output (needs nallo_outdir); "custom" = per-sample paths in custom_inputs

@@ -34,6 +34,12 @@
 #     nallo_outdir: "/path/to/nallo_results"
 #   OR
 #     bam_source: "pgx"          # use pgx alignment BAM (from ont_alignment.smk)
+#   OR
+#     bam_source: "custom"       # explicit files per sample, e.g. validation
+#     custom_inputs:             # samples (HG00276, HG001) from elsewhere
+#       HG00276_T:               # key = {sample}_{type}
+#         bam: "/path/to/HG00276.haplotagged.bam"   # needs .bam.bai next to it
+#         vcf: "/path/to/HG00276.filtered.vcf.gz"
 #
 # Default: pgx (no nallo required — works with current Chapter 2/3 setup).
 
@@ -42,9 +48,22 @@
 _starphase_enabled = config.get("starphase", {}).get("enabled", False)
 
 
+def starphase_custom_input(wildcards, key):
+    """Return the bam/vcf path given under starphase.custom_inputs.{sample}_{type}."""
+    sample_type = f"{wildcards.sample}_{wildcards.type}"
+    custom = config["starphase"].get("custom_inputs", {})
+    if sample_type not in custom:
+        raise ValueError(
+            f"starphase.bam_source is 'custom' but starphase.custom_inputs has no entry for {sample_type}"
+        )
+    return custom[sample_type][key]
+
+
 def starphase_bam(wildcards):
     """Return the BAM path for StarPhase based on bam_source config."""
     source = config.get("starphase", {}).get("bam_source", "pgx")
+    if source == "custom":
+        return starphase_custom_input(wildcards, "bam")
     if source == "nallo":
         nallo_dir = config["starphase"]["nallo_outdir"]
         return (
@@ -63,6 +82,8 @@ def starphase_bai(wildcards):
 def starphase_vcf(wildcards):
     """Return the VCF path for StarPhase."""
     source = config.get("starphase", {}).get("bam_source", "pgx")
+    if source == "custom":
+        return starphase_custom_input(wildcards, "vcf")
     if source == "nallo":
         nallo_dir = config["starphase"]["nallo_outdir"]
         return (
