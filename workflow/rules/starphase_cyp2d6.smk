@@ -9,8 +9,7 @@
 #   starphase:
 #     container:  "/home/your-username/singularity_images/starphase.sif"
 #     database:   "/home/your-username/reference/starphase_db/pbstarphase_20251002.json"
-#     reference:  "/home/your-username/reference/chr22.fa"   # GRCh38 chr22
-#     threads:    4
+#     reference:  "/home/your-username/reference/GRCh38_chr.fasta"  # full GRCh38, chr-prefixed
 #
 # INPUT FILES REQUIRED PER SAMPLE:
 #   - A haplotagged BAM: produced by nallo (preferred) or WhatsHap haplotagging
@@ -91,10 +90,10 @@ if _starphase_enabled:
           --vcf        phased SNV VCF (gzipped, tabix-indexed)
           --reference  GRCh38 chromosome FASTA (chr22 minimum for CYP2D6)
           --database   pre-built StarPhase JSON database
-          --output-dir directory to write results into
+          --output-calls  JSON file to write the calls to
 
-        The output JSON is named <sample>.json inside that directory.
-        We rename it to a deterministic path for downstream rules.
+        StarPhase v1.5.0 writes the JSON directly to --output-calls (there is
+        no --output-dir or --threads option in v1.5.0).
         """
         input:
             bam  = starphase_bam,
@@ -105,30 +104,18 @@ if _starphase_enabled:
         output:
             json = "results/starphase/{sample}_{type}_starphase.json",
         params:
-            outdir   = "results/starphase/{sample}_{type}_starphase_tmp",
-            threads  = config["starphase"].get("threads", 4),
             sif      = config["starphase"]["container"],
         log:
             "logs/starphase/{sample}_{type}_diplotype.log",
         shell:
             """
-            mkdir -p {params.outdir}
-
             apptainer exec {params.sif} pbstarphase diplotype \\
-                --bam        {input.bam}  \\
-                --vcf        {input.vcf}  \\
-                --reference  {input.ref}  \\
-                --database   {input.db}   \\
-                --output-dir {params.outdir} \\
-                --threads    {params.threads} \\
+                --bam          {input.bam}  \\
+                --vcf          {input.vcf}  \\
+                --reference    {input.ref}  \\
+                --database     {input.db}   \\
+                --output-calls {output.json} \\
                 > {log} 2>&1
-
-            # StarPhase writes <sample>.json — copy to our named output
-            # The JSON stem matches the SM: tag in the BAM read group
-            JSON_FILE=$(ls {params.outdir}/*.json | head -1)
-            cp "$JSON_FILE" {output.json}
-
-            echo "StarPhase JSON written to {output.json}" >> {log}
             """
 
 

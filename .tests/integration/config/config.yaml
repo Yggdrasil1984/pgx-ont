@@ -75,5 +75,4 @@ starphase:
   container: "/home/lars-ola-arvidsson/singularity_images/starphase.sif"
   database: "/home/lars-ola-arvidsson/reference/starphase_db/pbstarphase_20251002.json"
   reference: "/home/lars-ola-arvidsson/reference/GRCh38_chr.fasta"
-  threads: 4
   bam_source: "pgx"
