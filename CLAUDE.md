@@ -1,0 +1,135 @@
+# CLAUDE.md — pgx ONT adaptation (Region Halland)
+
+This file gives Claude Code the context for this project. Read it at the start of every session.
+
+## Who I'm working with
+
+- Lars-Ola, molecular biologist at Region Halland. No formal programming background.
+- Explain technical concepts in plain language. Molecular biology analogies are welcome.
+- Lars-Ola makes the decisions on direction, tool choice, and clinical interpretation. Claude does the hands-on terminal work.
+
+## How to work
+
+- **Go step by step and verify each step.** After each meaningful change, show what changed and confirm it worked before moving on.
+- **Dry run before real run.** Always run `snakemake -n` (or the Nextflow equivalent, e.g. `-stub` / `-preview`) before a real execution.
+- **Ask before anything hard to undo.** This includes deleting files, overwriting results, `git push`, `git reset --hard`, changing conda environments, or installing or upgrading system packages.
+- **Stop and ask when a decision is clinical or architectural.** For example: which CYP2D6 caller to use, changing filtering thresholds, or anything that affects a reported genotype.
+- **Keep commits small and well described**, one logical change per commit.
+- When something fails, diagnose it and explain the cause in a sentence or two before fixing it.
+
+## Data rules (important)
+
+- **Never read, copy, or process patient data.** Work only with public reference samples (HG002, HG00276, GIAB, 1000 Genomes) and the test data listed below.
+- If a path looks like it may contain patient samples, stop and ask.
+
+## Licensing constraint (hard requirement)
+
+The clinical pipeline must be redistributable through Genomic Medicine Sweden (GMS) repositories. That means:
+
+- Only MIT, GPL-3, Apache, BSD-style, or MPL-2.0 licensed tools may be used in the clinical path. (MPL-2.0 approved by Lars-Ola on 2026-10-19 for PharmCAT.)
+- **Do not use `epi2me-labs/wf-pgx` or Chinook in the clinical pipeline.** They are under the ONT Public License, which allows research use only and is not compatible with GMS redistribution. They may be used only for research comparison and validation.
+- Check the license before suggesting any new tool.
+
+## Project goal
+
+Build an ONT long-read pharmacogenomics pipeline for clinical use, simple and cheap enough for smaller regional labs to run. Region Halland will use **ONT only**, so ONT compatibility is the priority. The pipeline should still **keep PacBio HiFi possible**: the user states the platform per sample, and that choice selects the upstream settings (nallo `--preset`: `ONT_R10`, `ONT_R10_AS` for adaptive sampling, `revio`/`pacbio` for HiFi). Everything after nallo should be platform-independent.
+
+Planned clinical method (2027): a long-read-adapted Qiagen hybrid capture panel covering 49 biomarkers. Most are SNP regions; CYP2D6 has double tiling across the whole region.
+
+## Target architecture
+
+```
+ONT (or HiFi) FASTQ/BAM
+  → nallo     (minimap2 + DeepVariant + WhatsHap/LongPhase; haplotagged BAM, phased SNV VCF, Sniffles2 SV VCF)
+  → StarPhase (CYP2D6 diplotyping incl. deletions, duplications, CYP2D6/CYP2D7 hybrids; also HLA) → --pharmcat-tsv
+  → PharmCAT  (other genes from the VCF + StarPhase CYP2D6 as "outside call"; CPIC/DPWG phenotypes and recommendations)
+  → pgx       (Swedish clinical HTML report, filled from PharmCAT JSON, plus pgx's own coverage QC)
+```
+
+A hybrid of nallo and pgx: nallo replaces pgx's own alignment/variant calling; pgx keeps its coverage steps (depth_of_baits, depth_of_targets, missing positions) and its report. In nallo, Paraphase and the rare-disease steps (VEP/CADD/genmod ranking, methylation, STRs, assembly) are not needed.
+
+Licenses: nallo MIT, StarPhase BSD-3-Clause-Clear, PharmCAT MPL-2.0, pgx GPL-3.
+
+## Repositories and locations
+
+| What | Where | Notes |
+|---|---|---|
+| pgx pipeline | `~/projects/pgx` | Snakemake 7.18.0, conda env `pgx` (Python 3.8). Work on branch **`nanopore-adaptation`** |
+| nallo | `~/projects/nallo` | Nextflow (26.04.6), Java 21, `dev` branch. Test run succeeded |
+| DPYD amplicon pipeline | `~/projects/dpyd_amplicon/` | Standalone and separate from pgx. Validated on 6 blind samples |
+| pgx test data | `~/projects/pgx/.tests/integration/` | |
+| GRCh38 reference | `~/reference/GRCh38.fasta.gz` | |
+| chr22 reference | `~/reference/chr22.fa` | Converted from Ensembl to `chr22` naming |
+| GRCh38 with `chr` names | `~/reference/GRCh38_chr.fasta` | Required by StarPhase (full genome, chr-prefixed) |
+| StarPhase database | `~/reference/starphase_db/pbstarphase_20251002.json` | Pre-built database |
+| StarPhase container | `~/singularity_images/starphase.sif` | pbstarphase 1.5.0 |
+| PharmCAT container | `~/singularity_images/pharmcat_3.4.0.sif` | From `docker://pgkb/pharmcat:3.4.0`; bundles its own reference, no downloads at runtime |
+| HG00276 ONT test data | `~/projects/pgx/chapter4_validation/` | `HG00276.haplotagged.bam` + `HG00276.filtered.vcf.gz` (untracked, ~3 GB) |
+| HG001 ONT data | `~/projects/pgx/chapter8_validation/` | CYP2D6 region extract from ont-open-data giab_2025.12 |
+| CYP2D6 truth set | `~/Documents/CYP2D6 Coriell.xlsx` | GeT-RM consensus for 179 Coriell samples (Gaedigk et al. 2019). Always check truth here |
+| Clair3 container | `~/singularity_images/clair3.sif` | Model `/opt/models/r1041_e82_400bps_sup_v410` (inside the SIF) |
+
+
+## pgx pipeline: what has been changed
+
+- The hydra-genetics remote `module` imports for alignment and variant calling were replaced by local rule files:
+  - `ont_alignment.smk`: bwa mem for Illumina, `minimap2 -ax map-ont` for ONT
+  - `ont_varcall.smk`: Clair3 (via Apptainer) for both platforms, replacing GATK HaplotypeCaller
+- `@RG` tags use `SM:{sample}_{type}` in both aligners. Clair3 gets `--sample_name {sample}_{type}` to match.
+- `variant_filtration.py` reads `DP` from the FORMAT field (Clair3), not INFO (GATK).
+- The platform is called "ONT" everywhere (not "nanopore"). The HTML report shows "Sekvenseringsplattform" in Provdetaljer.
+- Known accepted limitation: one platform per sample per run.
+- StarPhase (`starphase_cyp2d6.smk`) is switched on with `starphase.enabled`. `starphase.bam_source` picks the input: `"nallo"` (nallo output paths), `"custom"` (per-sample `bam`/`vcf` under `starphase.custom_inputs`, keyed `{sample}_{type}`), or `"pgx"` (does not work yet: pgx's Clair3 VCF is temporary, uncompressed and unphased, and its BAM isn't haplotagged).
+- Validation samples need their own `samples.tsv`/`units.tsv` (passed with `--config samples=... units=...`), because `common.smk` only accepts sample names listed there.
+- Documentation: `README_nanopore_adaptation.md`, `pgx_ubuntu_setup_guide.md`, `pgx_nanopore_chapter2_guide.md`, `pgx_nallo_chapter3_guide.md`.
+
+## Known quirks and workarounds
+
+- **samtools:** use `/usr/bin/samtools` (v1.22.1) explicitly. The `pgx` conda env contains an ancient samtools (v0.1.19) that shadows it.
+- **Clair3:** run as `apptainer exec ~/singularity_images/clair3.sif run_clair3.sh ...`
+- **Running pgx:** use `--use-singularity` (as in the README). Without it, wrapper-based rules such as `depth_of_baits` fail with `No module named 'snakemake_wrapper_utils'`.
+- **StarPhase v1.5.0 CLI:** output goes to `--output-calls <file.json>`. There is no `--output-dir` or `--threads`. `--pharmcat-tsv <file>` writes the PharmCAT outside-call file. A full run on a WGS-sized BAM takes ~15 min (most of it on CYP2D6).
+- **PharmCAT:** `pharmcat_pipeline` has no outside-call flag, so run two stages: `pharmcat_vcf_preprocessor -vcf ...`, then `java -jar /pharmcat/pharmcat.jar -vcf <preprocessed> -po <starphase tsv> -reporterJson`. Run with `apptainer exec --bind /home/lars-ola-arvidsson,/tmp`. **Never** use `-0` / `--absent-to-ref` / `--unspecified-to-ref` (they turn "not seen" into "normal"; clinical decision).
+- **The pgx conda env has no openpyxl.** Read `.xlsx` files with the Python standard library (zipfile + XML) instead of installing anything.
+- **StarPhase `build` is broken** (SIGFPE in v2.2.0; v1.5.0 needs the PharmVar API, and pharmvar.org is blocked on the institution network). Use the pre-built databases from https://github.com/PacificBiosciences/pb-StarPhase/tree/main/data instead.
+- **Paraphase is dropped from the clinical path** (decided 2026-10-19). It reports copy number and gene copies but no star alleles, StarPhase can't use its output, and it is HiFi-first. The code is parked on branch `paraphase-research`. StarPhase is the CYP2D6 caller.
+- **Aldy4** has a documented hang on ONT CYP2D6 (GitHub issue #73). Avoid it.
+- Past environment issues to be aware of: AppArmor restrictions, libdeflate conda conflicts, PEP 668 pip restrictions (don't `pip install` into the system Python), pulp version conflicts with Snakemake 7.
+
+## Validation status
+
+CYP2D6 regression pair (truth = GeT-RM consensus from the Coriell xlsx):
+
+| Sample | GeT-RM truth | StarPhase | Status |
+|---|---|---|---|
+| HG00276 | \*4/\*5 | \*5/\*4, PM, AS 0.0 | ✅ also through Snakemake (`bam_source: custom`, 2026-10-19) and through PharmCAT as outside call |
+| HG001 / NA12878 | \*3/(\*68)+\*4 | \*3/[\*68 + \*4] | ✅ correct. The Chapter 8 document wrongly used "\*2x2/\*4" as truth |
+
+- Full pgx end-to-end run succeeded for both Illumina and ONT. Integration test passes with StarPhase disabled.
+- PharmCAT 3.4.0 hand test on HG00276 (2026-10-19): CYP2D6 taken from StarPhase. 53 PGx positions were missing from the (non-gVCF) VCF, and HLA-A/B were uncalled (only CYP2D6 was in the StarPhase TSV). Other genes are not yet checked against a truth set.
+
+## Coverage colour scale (decided by Lars-Ola, 2026-10-20)
+
+Read depth per target/position in the report, for ONT:
+
+| Depth | Colour |
+|---|---|
+| ≥ 100 | green |
+| 50–99 | pale green |
+| 30–49 | orange |
+| 1–29 | red |
+| 0 | black |
+
+Reasoning: nallo users accept depth 30 for HiFi (Q > 30, 99.9% accurate reads). ONT reads average about Q20 (99%), range ~Q10–Q30, so roughly 100× is the ONT target. 24 samples per run will not reach that everywhere, hence the graded scale. HiFi can use lower thresholds, so the thresholds should be configurable per platform. Whether low coverage also blocks a "normal" call in the report is a separate clinical decision for Lars-Ola.
+
+## Current focus (October 2026)
+
+Connect the pieces: nallo → StarPhase → PharmCAT → pgx report. Approved next steps (2026-10-20):
+1. StarPhase rule also writes `--pharmcat-tsv` (check that HLA-A/B are included).
+2. Two PharmCAT rules in Snakemake (preprocess, then PharmCAT with `-po`), tested on HG00276.
+3. pgx report reads PharmCAT JSON for genotypes, phenotypes and recommendations, keeps the coverage tables, and uses the colour scale above.
+Later: have nallo's DeepVariant emit a gVCF so "normal" and "not covered" can be told apart.
+
+## Longer-term (separate project)
+
+A new open-source ONT CYP2D6/CYP2D7 resolver (MIT or GPL-3, to be contributed to GMS), roughly 180–300 hours of work. This is only needed if StarPhase proves insufficient. So far StarPhase is 2/2 on the structural CYP2D6 cases (HG00276, HG001).
