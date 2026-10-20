@@ -68,6 +68,23 @@ if config.get("starphase", {}).get("enabled", False):
         },
     ])
 
+# Conditionally add PharmCAT outputs when enabled
+if config.get("pharmcat", {}).get("enabled", False):
+    output_spec["files"].extend([
+        {
+            "name": "_copy_pharmcat_report_json",
+            "input": "results/pharmcat/{sample}_{type}.report.json",
+            "output": "results/dna/pgx/additional_files/{sample}_{type}.pharmcat.report.json",
+            "types": ["T", "N"],
+        },
+        {
+            "name": "_copy_pharmcat_report_html",
+            "input": "results/pharmcat/{sample}_{type}.report.html",
+            "output": "results/dna/pgx/additional_files/{sample}_{type}.pharmcat.report.html",
+            "types": ["T", "N"],
+        },
+    ])
+
 
 # Reading choromosomes from design bed file
 def get_choromosomes(genomic_regions: pd.DataFrame) -> typing.List[str]:
