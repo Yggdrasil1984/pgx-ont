@@ -100,3 +100,5 @@ pharmcat:
   enabled: false
   container: "/home/lars-ola-arvidsson/singularity_images/pharmcat_3.4.0.sif"
   outside_call_genes: ["CYP2D6"]  # genes called by StarPhase instead of PharmCAT (clinical decision)
+  swedish_guidelines: "/home/lars-ola-arvidsson/reference/guidelines/swedish_guidelines.tsv"  # outside the repo; format: config/templates/swedish_guidelines.example.tsv
+  guideline_sources: ["CPIC", "DPWG"]  # English text sources shown where no Swedish text matches
