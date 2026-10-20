@@ -22,6 +22,7 @@
 #   results/starphase/{sample}_{type}_cyp2d6_result.csv — parsed CYP2D6 result
 #     (columns: sample,gene,diplotype,hap1,hap2,activity_score,phenotype,
 #                cnv_status,cnv_note)
+#   results/starphase/{sample}_{type}_pharmcat.tsv      — PharmCAT outside-call file
 # ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -112,6 +113,7 @@ if _starphase_enabled:
           --reference  GRCh38 chromosome FASTA (chr22 minimum for CYP2D6)
           --database   pre-built StarPhase JSON database
           --output-calls  JSON file to write the calls to
+          --pharmcat-tsv  outside-call file for PharmCAT (CYP2D6, HLA, ...)
 
         StarPhase v1.5.0 writes the JSON directly to --output-calls (there is
         no --output-dir or --threads option in v1.5.0).
@@ -124,6 +126,7 @@ if _starphase_enabled:
             db   = config["starphase"]["database"],
         output:
             json = "results/starphase/{sample}_{type}_starphase.json",
+            pharmcat_tsv = "results/starphase/{sample}_{type}_pharmcat.tsv",
         params:
             sif      = config["starphase"]["container"],
         log:
@@ -136,6 +139,7 @@ if _starphase_enabled:
                 --reference    {input.ref}  \\
                 --database     {input.db}   \\
                 --output-calls {output.json} \\
+                --pharmcat-tsv {output.pharmcat_tsv} \\
                 > {log} 2>&1
             """
 
