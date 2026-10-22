@@ -107,6 +107,7 @@ pharmcat:
 panel_coverage:
   enabled: false
   target_bed: "/home/lars-ola-arvidsson/reference/panel/pgx_panel_v2_targets.bed"  # BED4, name = GENE or GENE|rsID
+  clinical_positions: "/home/lars-ola-arvidsson/reference/panel/pharmcat_3.4.0_positions.bed"  # colour follows these positions inside a target
   samtools: "/usr/bin/samtools"  # the pgx conda env has an ancient samtools
   min_mapq: 0  # 0 = count all reads (mosdepth default)
   thresholds:  # lower limits for [green, pale green, orange, red]; 0 reads = black
