@@ -80,7 +80,7 @@ def build_report(phenotype_json, report_json, swedish_tsv, starphase_csv, starph
     by_gene = {c["gene"]: c for c in gene_calls}
     for s in swedish:
         s["phenotypes"] = ", ".join(f"{g} {by_gene[g]['phenotype']}" for g in s["genes"])
-    covered = {g for s in swedish if s["status"] == prd.STATUS_OK for g in s["genes"]}
+    covered = prd.genes_replacing_english(swedish)
     reported = {c["gene"] for c in called}
     english = [r for r in prd.english_recommendations(report_json, sources=sources, skip_genes=covered)
                if set(r["genes"]) & reported]

@@ -17,6 +17,8 @@ Swedish table format (tab-separated, '#' lines are comments):
     text            Swedish recommendation text (HTML, <br> for new lines)
     classification  strength of recommendation per drug
     source          where the text comes from
+    replaces_english  "ja" (default) hides CPIC/DPWG text for these genes;
+                      "nej" shows both (e.g. a general CYP2D6 text)
 """
 
 import csv
@@ -149,6 +151,17 @@ def select_swedish(gene_calls, guidelines):
             "guideline": match,
         })
     return selected
+
+
+def genes_replacing_english(selected):
+    """Genes whose matched Swedish row replaces the CPIC/DPWG text."""
+    return {
+        gene
+        for s in selected
+        if s["status"] == STATUS_OK
+        and (s["guideline"].get("replaces_english") or "ja").strip().lower() != "nej"
+        for gene in s["genes"]
+    }
 
 
 def english_recommendations(report_json, sources=("CPIC", "DPWG"), skip_genes=()):

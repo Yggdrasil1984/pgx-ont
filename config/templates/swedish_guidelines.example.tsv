@@ -1,7 +1,8 @@
 # Exempel på formatet för svenska tolkningstexter (pharmcat.swedish_guidelines i config.yaml).
 # De riktiga texterna hålls utanför git-repot tills tolkningsgruppen godkänt dem.
 # match: GEN=PharmCAT-fenotyp, flera gener med ; (t.ex. TPMT och NUDT15), eller GEN=AS:<aktivitetspoäng>.
+# replaces_english: ja = döljer CPIC/DPWG-text för generna (standard); nej = båda visas.
 # text: HTML, <br> för radbrytning. Fenotyper/aktivitetspoäng utan matchande rad ger "Manuell bedömning".
-match	phenotype_sv	drugs	text	classification	source
-TPMT=Normal Metabolizer;NUDT15=Normal Metabolizer	TPMT normal metaboliserare samt NUDT15 normal metaboliserare	azatioprin, merkaptopurin, tioguanin	EXEMPELTEXT.<br>Andra stycket.	Azatioprin: Stark; Merkaptopurin: Stark; Tioguanin: Stark	exempel
-DPYD=AS:2.0	DPYD aktivitetspoäng 2.0	kapecitabin, fluorouracil	EXEMPELTEXT.		exempel
+match	phenotype_sv	drugs	text	classification	source	replaces_english
+TPMT=Normal Metabolizer;NUDT15=Normal Metabolizer	TPMT normal metaboliserare samt NUDT15 normal metaboliserare	azatioprin, merkaptopurin, tioguanin	EXEMPELTEXT.<br>Andra stycket.	Azatioprin: Stark; Merkaptopurin: Stark; Tioguanin: Stark	exempel	ja
+DPYD=AS:2.0	DPYD aktivitetspoäng 2.0	kapecitabin, fluorouracil	EXEMPELTEXT.		exempel	ja

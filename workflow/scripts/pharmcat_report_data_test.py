@@ -28,10 +28,11 @@ PHENOTYPE_JSON = {
 
 GUIDELINES_TSV = (
     "# comment line\n"
-    "match\tphenotype_sv\tdrugs\ttext\tclassification\tsource\n"
-    "TPMT=Intermediate Metabolizer;NUDT15=Normal Metabolizer\tx\ttiopuriner\tSV-TPMT-IM\tStark\ttest\n"
-    "DPYD=AS:2.0\tx\tfluorouracil\tSV-DPYD-2\t\ttest\n"
-    "DPYD=AS:1.5\tx\tfluorouracil\tSV-DPYD-1.5\t\ttest\n"
+    "match\tphenotype_sv\tdrugs\ttext\tclassification\tsource\treplaces_english\n"
+    "TPMT=Intermediate Metabolizer;NUDT15=Normal Metabolizer\tx\ttiopuriner\tSV-TPMT-IM\tStark\ttest\tja\n"
+    "DPYD=AS:2.0\tx\tfluorouracil\tSV-DPYD-2\t\ttest\t\n"
+    "DPYD=AS:1.5\tx\tfluorouracil\tSV-DPYD-1.5\t\ttest\tja\n"
+    "CYP2D6=Poor Metabolizer\tx\tCYP2D6\tSV-CYP2D6-PM\t\ttest\tnej\n"
 )
 
 
@@ -100,6 +101,13 @@ class TestPharmcatReportData(unittest.TestCase):
         selected = {tuple(s["genes"]): s for s in prd.select_swedish(self.calls, self.guidelines)}
         self.assertEqual(selected[("NUDT15", "TPMT")]["guideline"]["text"], "SV-TPMT-IM")
         self.assertEqual(selected[("DPYD",)]["guideline"]["text"], "SV-DPYD-2")
+
+    def test_replaces_english(self):
+        selected = prd.select_swedish(self.calls, self.guidelines)
+        # TPMT+NUDT15 "ja", DPYD empty = default "ja", CYP2D6 "nej"
+        self.assertEqual(prd.genes_replacing_english(selected), {"TPMT", "NUDT15", "DPYD"})
+        cyp2d6 = next(s for s in selected if s["genes"] == ["CYP2D6"])
+        self.assertEqual(cyp2d6["guideline"]["text"], "SV-CYP2D6-PM")
 
     def test_swedish_no_match_is_manual(self):
         self.by_gene["TPMT"]["phenotype"] = "Possible Intermediate Metabolizer"
