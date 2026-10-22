@@ -131,3 +131,45 @@ if _pharmcat_enabled:
                 -reporterJson -reporterHtml \\
                 > {log} 2>&1
             """
+
+
+# ── Rule 4: Swedish pgx report from PharmCAT + StarPhase + coverage ─────────
+def sample_platform(wildcards):
+    return units[
+        (units["sample"] == wildcards.sample) & (units["type"] == wildcards.type)
+    ]["platform"].iloc[0]
+
+
+if _pharmcat_enabled:
+
+    if not config.get("panel_coverage", {}).get("enabled", False):
+        raise ValueError(
+            "pharmcat.enabled is true but panel_coverage.enabled is false: the "
+            "PharmCAT-based report needs the per-target coverage"
+        )
+
+    rule generate_pharmcat_report:
+        """
+        Swedish clinical report: gene summary (PharmCAT, CYP2D6 from
+        StarPhase) with coverage colours, Swedish texts where available,
+        CPIC/DPWG text otherwise, CYP2D6 structure and per-target depth.
+        """
+        input:
+            phenotype      = "results/pharmcat/{sample}_{type}.phenotype.json",
+            report         = "results/pharmcat/{sample}_{type}.report.json",
+            starphase_csv  = "results/starphase/{sample}_{type}_cyp2d6_result.csv",
+            starphase_json = "results/starphase/{sample}_{type}_starphase.json",
+            coverage       = "results/coverage/{sample}_{type}.panel_coverage.tsv",
+            swedish        = config["pharmcat"]["swedish_guidelines"],
+            template       = config["pharmcat"].get(
+                "report_template", "config/templates/html_template_pharmcat.html"),
+        output:
+            html = "results/report/{sample}_{type}.pgx_report.html",
+        params:
+            platform   = sample_platform,
+            thresholds = panel_coverage_thresholds,
+            sources    = config["pharmcat"].get("guideline_sources", ["CPIC", "DPWG"]),
+        log:
+            "logs/report/{sample}_{type}_pgx_report.log",
+        script:
+            "../scripts/generate_pharmcat_report.py"

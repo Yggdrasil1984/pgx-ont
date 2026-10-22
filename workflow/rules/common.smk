@@ -78,6 +78,12 @@ if config.get("pharmcat", {}).get("enabled", False):
             "types": ["T", "N"],
         },
         {
+            "name": "_copy_pgx_report_pharmcat",
+            "input": "results/report/{sample}_{type}.pgx_report.html",
+            "output": "results/dna/pgx/{sample}_{type}.pgx_report_pharmcat.html",
+            "types": ["T", "N"],
+        },
+        {
             "name": "_copy_pharmcat_report_html",
             "input": "results/pharmcat/{sample}_{type}.report.html",
             "output": "results/dna/pgx/additional_files/{sample}_{type}.pharmcat.report.html",
