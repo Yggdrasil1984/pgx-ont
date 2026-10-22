@@ -18,6 +18,7 @@ include: "rules/ont_alignment.smk"
 include: "rules/ont_varcall.smk"
 include: "rules/starphase_cyp2d6.smk"
 include: "rules/pharmcat.smk"
+include: "rules/panel_coverage.smk"
 
 
 report: "report/workflow.rst"
