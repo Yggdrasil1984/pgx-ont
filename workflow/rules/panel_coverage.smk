@@ -2,7 +2,8 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # Read depth per panel target with the report's colour scale.
 #
-# Uses the same BAM as StarPhase (starphase.bam_source decides which one).
+# Uses the same BAM/CRAM as StarPhase (starphase.bam_source decides which
+# one); the reference (starphase.reference) is passed for CRAM decoding.
 # The colour is set by the lowest depth at the clinical positions inside each
 # target (whole target if it has none); thresholds are chosen by the sample's
 # platform in units.tsv.
@@ -48,6 +49,7 @@ if _panel_coverage_enabled:
             bam = starphase_bam,
             bai = starphase_bai,
             bed = config["panel_coverage"]["target_bed"],
+            ref = config["starphase"]["reference"],
         output:
             depth = "results/coverage/{sample}_{type}.panel_depth.tsv.gz",
         params:
@@ -57,7 +59,8 @@ if _panel_coverage_enabled:
             "logs/coverage/{sample}_{type}_panel_depth.log",
         shell:
             """
-            ({params.samtools} depth -a -Q {params.min_mapq} -b {input.bed} {input.bam} \\
+            ({params.samtools} depth -a -Q {params.min_mapq} --reference {input.ref} \\
+                -b {input.bed} {input.bam} \\
                 | gzip > {output.depth}) 2> {log}
             """
 

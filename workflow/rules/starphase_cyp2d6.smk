@@ -31,8 +31,13 @@
 # or the pipeline uses its own Clair3 BAM.  Configure in config.yaml:
 #
 #   starphase:
-#     bam_source: "nallo"        # use nallo haplotagged BAM
+#     bam_source: "nallo"        # use nallo haplotagged BAM/CRAM + per-sample VCF
 #     nallo_outdir: "/path/to/nallo_results"
+#     nallo_alignment_format: "bam"   # or "cram" (nallo --alignment_output_format)
+#     nallo_sample_ids:          # optional: pgx {sample}_{type} -> nallo sample id
+#       HG002_T: "HG002_Revio"   # (default: the nallo id is {sample}_{type})
+#   nallo layout: aligned_reads/{id}/{id}_haplotagged.{bam,cram}
+#                 snvs/sample/{id}/{id}_deepvariant_snvs.vcf.gz (phased)
 #   OR
 #     bam_source: "pgx"          # use pgx alignment BAM (from ont_alignment.smk)
 #   OR
@@ -60,24 +65,30 @@ def starphase_custom_input(wildcards, key):
     return custom[sample_type][key]
 
 
+def nallo_sample_id(wildcards):
+    """nallo's sample id for this pgx sample (default {sample}_{type})."""
+    sample_type = f"{wildcards.sample}_{wildcards.type}"
+    return config["starphase"].get("nallo_sample_ids", {}).get(sample_type, sample_type)
+
+
 def starphase_bam(wildcards):
-    """Return the BAM path for StarPhase based on bam_source config."""
+    """Return the BAM/CRAM path for StarPhase based on bam_source config."""
     source = config.get("starphase", {}).get("bam_source", "pgx")
     if source == "custom":
         return starphase_custom_input(wildcards, "bam")
     if source == "nallo":
         nallo_dir = config["starphase"]["nallo_outdir"]
-        return (
-            f"{nallo_dir}/aligned_reads/sample/"
-            f"{wildcards.sample}_{wildcards.type}/"
-            f"{wildcards.sample}_{wildcards.type}_haplotagged.bam"
-        )
+        fmt = config["starphase"].get("nallo_alignment_format", "bam")
+        sid = nallo_sample_id(wildcards)
+        return f"{nallo_dir}/aligned_reads/{sid}/{sid}_haplotagged.{fmt}"
     # Default: pgx alignment BAM (from ont_alignment.smk)
     return f"alignment/samtools_merge_bam/{wildcards.sample}_{wildcards.type}.bam"
 
 
 def starphase_bai(wildcards):
-    return starphase_bam(wildcards) + ".bai"
+    """Index next to the alignment: .bam.bai or .cram.crai."""
+    alignment = starphase_bam(wildcards)
+    return alignment + (".crai" if alignment.endswith(".cram") else ".bai")
 
 
 def starphase_vcf(wildcards):
@@ -87,11 +98,8 @@ def starphase_vcf(wildcards):
         return starphase_custom_input(wildcards, "vcf")
     if source == "nallo":
         nallo_dir = config["starphase"]["nallo_outdir"]
-        return (
-            f"{nallo_dir}/snvs/sample/"
-            f"{wildcards.sample}_{wildcards.type}/"
-            f"{wildcards.sample}_{wildcards.type}_deepvariant_snvs.vcf.gz"
-        )
+        sid = nallo_sample_id(wildcards)
+        return f"{nallo_dir}/snvs/sample/{sid}/{sid}_deepvariant_snvs.vcf.gz"
     # Default: pgx Clair3 merged VCF
     return (
         f"snv_indels/haplotypecaller/"
