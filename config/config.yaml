@@ -113,3 +113,8 @@ panel_coverage:
   thresholds:  # lower limits for [green, pale green, orange, red]; 0 reads = black
     ONT: [100, 50, 30, 1]  # decided by Lars-Ola 2026-10-20
     # PacBio: lower limits to be decided (HiFi is more accurate per read)
+
+# ── Plain SNP genotypes with HGVS for markers outside PharmCAT ───────────────
+snp_markers:
+  enabled: false
+  table: "/home/lars-ola-arvidsson/reference/panel/snp_markers_draft.tsv"  # DRAFT, outside the repo; needs panel_coverage

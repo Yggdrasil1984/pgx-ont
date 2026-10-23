@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pharmcat_report_data as prd  # noqa: E402
 from panel_coverage import worst_colour  # noqa: E402
 from generate_pgx_report import load_cyp2d6_result  # noqa: E402
+from snp_genotypes import read_results as read_snp_results  # noqa: E402
 
 STATUS_NOT_IN_PANEL = "Ej analyserad (ingår ej i panelen)"
 WARN_COLOURS = ("red", "black")
@@ -69,7 +70,7 @@ def add_coverage(gene_calls, coverage):
 
 def build_report(phenotype_json, report_json, swedish_tsv, starphase_csv, starphase_json,
                  coverage_tsv, template, sample, platform, thresholds,
-                 not_analysed=("HLA-A", "HLA-B"), sources=("CPIC", "DPWG")):
+                 not_analysed=("HLA-A", "HLA-B"), sources=("CPIC", "DPWG"), snp_tsv=None):
     gene_calls = prd.load_gene_calls(phenotype_json, not_analysed=set(not_analysed))
     coverage = read_coverage(coverage_tsv)
     gene_calls = add_coverage(gene_calls, coverage)
@@ -103,6 +104,7 @@ def build_report(phenotype_json, report_json, swedish_tsv, starphase_csv, starph
             english=english,
             cyp2d6=load_cyp2d6_result(starphase_csv),
             coverage=coverage,
+            snps=read_snp_results(snp_tsv) if snp_tsv else [],
         )
     return html
 
@@ -120,6 +122,7 @@ if __name__ == "__main__":
         platform=snakemake.params.platform,
         thresholds=snakemake.params.thresholds,
         sources=snakemake.params.sources,
+        snp_tsv=getattr(snakemake.input, "snps", None),
     )
     with open(snakemake.output.html, "w", encoding="utf-8") as fh:
         fh.write(html)

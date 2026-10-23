@@ -644,6 +644,7 @@ color: #faa21a;
     <li><a href="#svenska-rekommendationer">Kliniska rekommendationer (svenska)</a></li>
     <li><a href="#engelska-rekommendationer">Riktlinjer CPIC/DPWG (engelska)</a></li>
     <li><a href="#CYP2D6">CYP2D6</a></li>
+    {% if snps %}<li><a href="#ovriga-markorer">Övriga markörer</a></li>{% endif %}
     <li><a href="#lasdjup">Läsdjup per mål</a></li>
     </ul>
     </div>
@@ -765,6 +766,34 @@ Diplotypering med pb-StarPhase {{ starphase_version }} direkt från läsningarna
 dupliceringar och CYP2D6/CYP2D7-hybrider). Resultatet förs in i PharmCAT som extern genotyp.
 </p>
 </div>
+
+{% if snps %}
+<div id="ovriga-markorer" class="section level1">
+<h1>Övriga markörer (SNP-genotyper)</h1>
+<p class="muted" style="font-size:0.85em;">
+Markörer utanför PharmCAT. Nomenklatur enligt HGVS (MANE Select-transkript). Där ingen variant påvisats
+visas den kliniskt relevanta varianten som testats. Utan variant och med läsdjup &lt; {{ thresholds[2] }}
+anges positionen som ej bedömbar.
+</p>
+<table class="table table-striped" style="margin-left:auto;margin-right:auto;">
+<thead><tr><th>Gen</th><th>rsID</th><th>Transkript</th><th>HGVS c.</th><th>HGVS p.</th><th>HGVS g.</th><th>Resultat</th><th>Läsdjup</th></tr></thead>
+<tbody>
+{% for s in snps %}
+<tr>
+  <td><strong>{{ s.gene }}</strong></td>
+  <td>{{ s.rsid }}</td>
+  <td>{{ s.transcript }}</td>
+  <td>{{ s.hgvsc }}</td>
+  <td>{{ s.hgvsp }}</td>
+  <td>{{ s.hgvsg }}</td>
+  <td>{% if s.result in ("Heterozygot", "Homozygot") %}<strong>{{ s.result }}</strong>{% elif s.result.startswith("Ej") %}<span class="flag">{{ s.result }}</span>{% else %}{{ s.result }}{% endif %}{% if s.note %}<br><span class="muted">{{ s.note }}</span>{% endif %}</td>
+  <td><span class="cov cov-{{ s.colour }}">{{ s.depth }}</span></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endif %}
 
 <div id="lasdjup" class="section level1">
 <button class="collapsible">Läsdjup per mål &mdash; {{ coverage|length }} mål</button>

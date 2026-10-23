@@ -160,6 +160,8 @@ if _pharmcat_enabled:
             starphase_csv  = "results/starphase/{sample}_{type}_cyp2d6_result.csv",
             starphase_json = "results/starphase/{sample}_{type}_starphase.json",
             coverage       = "results/coverage/{sample}_{type}.panel_coverage.tsv",
+            **({"snps": "results/snp/{sample}_{type}.snp_genotypes.tsv"}
+               if config.get("snp_markers", {}).get("enabled", False) else {}),
             swedish        = config["pharmcat"]["swedish_guidelines"],
             template       = config["pharmcat"].get(
                 "report_template", "config/templates/html_template_pharmcat.html"),
