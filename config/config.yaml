@@ -118,3 +118,8 @@ panel_coverage:
 snp_markers:
   enabled: false
   table: "/home/lars-ola-arvidsson/reference/panel/snp_markers_draft.tsv"  # DRAFT, outside the repo; needs panel_coverage
+
+# ── Reference genotypes from nallo's gVCF (PharmCAT + SNP section) ───────────
+reference_calls:
+  enabled: false  # needs starphase.bam_source: nallo and nallo run with the gVCF publishDir config
+  positions: ["/home/lars-ola-arvidsson/reference/panel/pharmcat_3.4.0_positions.bed"]  # SNP markers added automatically

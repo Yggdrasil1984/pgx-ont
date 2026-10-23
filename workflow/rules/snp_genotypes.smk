@@ -33,7 +33,7 @@ if _snp_markers_enabled:
         """Genotype each marker from the VCF; depth decides negative results."""
         input:
             markers = config["snp_markers"]["table"],
-            vcf     = starphase_vcf,
+            vcf     = pharmcat_vcf,
             depth   = "results/coverage/{sample}_{type}.panel_depth.tsv.gz",
         output:
             tsv = "results/snp/{sample}_{type}.snp_genotypes.tsv",
