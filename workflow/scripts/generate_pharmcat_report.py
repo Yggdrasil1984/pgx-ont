@@ -68,12 +68,15 @@ def add_coverage(gene_calls, coverage):
     return gene_calls
 
 
-def build_report(phenotype_json, report_json, swedish_tsv, starphase_csv, starphase_json,
+def build_report(phenotype_json, report_json, match_json, swedish_tsv, starphase_csv, starphase_json,
                  coverage_tsv, template, sample, platform, thresholds,
                  not_analysed=("HLA-A", "HLA-B"), sources=("CPIC", "DPWG"), snp_tsv=None):
     gene_calls = prd.load_gene_calls(phenotype_json, not_analysed=set(not_analysed))
     coverage = read_coverage(coverage_tsv)
     gene_calls = add_coverage(gene_calls, coverage)
+    uncallable = prd.load_uncallable(match_json)
+    for call in gene_calls:
+        call["uncallable"] = uncallable.get(call["gene"], []) if call["status"] == prd.STATUS_OK else []
 
     guidelines = prd.load_swedish_guidelines(swedish_tsv)
     called = [c for c in gene_calls if c["status"] == prd.STATUS_OK]
@@ -113,6 +116,7 @@ if __name__ == "__main__":
     html = build_report(
         phenotype_json=snakemake.input.phenotype,
         report_json=snakemake.input.report,
+        match_json=snakemake.input.match,
         swedish_tsv=snakemake.input.swedish,
         starphase_csv=snakemake.input.starphase_csv,
         starphase_json=snakemake.input.starphase_json,

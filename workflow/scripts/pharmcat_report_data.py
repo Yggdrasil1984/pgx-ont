@@ -93,6 +93,17 @@ def load_gene_calls(phenotype_json, genes=None, not_analysed=()):
     return calls
 
 
+def load_uncallable(match_json):
+    """{gene: [alleles PharmCAT could not test]} from PharmCAT's match JSON.
+
+    An allele is uncallable when positions that define it are missing or
+    not confidently called; a "*1/*1" result then does not exclude it.
+    """
+    with open(match_json) as fh:
+        results = json.load(fh).get("results", [])
+    return {r["gene"]: sorted(r.get("uncallableHaplotypes") or []) for r in results}
+
+
 def _parse_match(match):
     """'TPMT=Normal Metabolizer;NUDT15=Poor Metabolizer' -> {gene: value}."""
     conditions = {}

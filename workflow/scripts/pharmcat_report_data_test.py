@@ -115,6 +115,14 @@ class TestPharmcatReportData(unittest.TestCase):
         self.assertEqual(selected[("NUDT15", "TPMT")]["status"], prd.STATUS_MANUAL)
         self.assertIsNone(selected[("NUDT15", "TPMT")]["guideline"])
 
+    def test_load_uncallable(self):
+        path = _write({"results": [
+            {"gene": "CYP3A4", "uncallableHaplotypes": ["*2", "*10"]},
+            {"gene": "TPMT", "uncallableHaplotypes": []},
+            {"gene": "NUDT15"},
+        ]}, ".json")
+        self.assertEqual(prd.load_uncallable(path), {"CYP3A4": ["*10", "*2"], "TPMT": [], "NUDT15": []})
+
     def test_english_recommendations(self):
         recs = prd.english_recommendations(_write(REPORT_JSON, ".json"), skip_genes={"TPMT"})
         keys = sorted((r["drug"], r["source"]) for r in recs)

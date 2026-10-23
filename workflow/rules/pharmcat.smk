@@ -58,7 +58,7 @@ if _pharmcat_enabled:
         representation, and list PGx positions that are missing.
         """
         input:
-            vcf = starphase_vcf,
+            vcf = pharmcat_vcf,
         output:
             vcf     = "results/pharmcat/{sample}_{type}.preprocessed.vcf.bgz",
             missing = "results/pharmcat/{sample}_{type}.missing_pgx_var.vcf",
@@ -113,6 +113,7 @@ if _pharmcat_enabled:
             vcf     = "results/pharmcat/{sample}_{type}.preprocessed.vcf.bgz",
             outside = "results/pharmcat/{sample}_{type}.outside_calls.tsv",
         output:
+            match     = "results/pharmcat/{sample}_{type}.match.json",
             phenotype = "results/pharmcat/{sample}_{type}.phenotype.json",
             report    = "results/pharmcat/{sample}_{type}.report.json",
             html      = "results/pharmcat/{sample}_{type}.report.html",
@@ -155,6 +156,7 @@ if _pharmcat_enabled:
         CPIC/DPWG text otherwise, CYP2D6 structure and per-target depth.
         """
         input:
+            match          = "results/pharmcat/{sample}_{type}.match.json",
             phenotype      = "results/pharmcat/{sample}_{type}.phenotype.json",
             report         = "results/pharmcat/{sample}_{type}.report.json",
             starphase_csv  = "results/starphase/{sample}_{type}_cyp2d6_result.csv",
