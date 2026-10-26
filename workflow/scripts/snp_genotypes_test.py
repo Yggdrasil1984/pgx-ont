@@ -79,6 +79,8 @@ class TestSnpGenotypes(unittest.TestCase):
         rows = self._results({}, {("chr7", 500): 150})
         self.assertEqual(rows["rs41303343"]["result"], sg.NOT_ASSESSABLE_INDEL)
         self.assertIn("indel", rows["rs41303343"]["note"])
+        self.assertEqual(rows["rs41303343"]["defining_allele"], "A")
+        self.assertEqual(rows["rs41303343"]["hgvsc"], "c.1035dup")
 
     def test_unexpected_allele_is_flagged(self):
         rows = self._results({("chr1", 200): ("G", ["C"], "0/1")}, {("chr1", 200): 90})

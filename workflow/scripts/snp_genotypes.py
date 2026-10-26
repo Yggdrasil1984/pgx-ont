@@ -120,13 +120,15 @@ def genotype_markers(markers, vcf_records, depths, thresholds):
             "transcript": m["transcript"], "depth": depth,
             "colour": depth_colour(depth, thresholds), "note": "",
         }
-        if not is_snv(m):
-            result.update(result=NOT_ASSESSABLE_INDEL, note="indel: granska manuellt",
-                          hgvsc=m["hgvsc"], hgvsp=m["hgvsp"], hgvsg=m["hgvsg"])
-            results.append(result)
-            continue
         defining = m.get("defining_allele") or m["clinical_alt"]
         result.update(defining_allele=defining, defining_name=m.get("defining_name", ""))
+        if not is_snv(m):
+            c, p, g = _hgvs_for(m, m["clinical_alt"])
+            result.update(result=NOT_ASSESSABLE_INDEL, note="indel: granska manuellt",
+                          genotype="", copies="", hgvsc=c or m["hgvsc"], hgvsp=p or m["hgvsp"],
+                          hgvsg=m["hgvsg"])
+            results.append(result)
+            continue
         bases = _genotype_bases(m, vcf_records.get(key), depth, min_assessable)
         if bases is None:
             result.update(result=NOT_ASSESSABLE, genotype="", copies="")
