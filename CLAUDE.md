@@ -141,13 +141,13 @@ Report rules decided by Lars-Ola:
 - Depth colours (above). A gene's colour comes from its targets with clinical positions.
 - 0/0 only with ≥ 30 reads.
 - SNP section: genotype + zygosity + copies of the defining allele.
+- Indel markers (CYP3A5\*7, IFNL4 ΔG/TT) are matched after normalising marker and VCF alleles (anchor base, left-aligned). "Ej bedömbar (osäkert anrop)" = ≥ 30 reads but the caller gave ./.; "(lågt läsdjup)" = < 30 reads. HG00276 IFNL4: 64–66/68 reads show TT, no ΔG reads, but DeepVariant was unsure (gVCF ./., GQ 1), so it is reported as not assessable.
 - "Ej testade alleler" shown per gene.
 - HLA not analysed (StarPhase HLA unvalidated).
 - English CPIC/DPWG text where no Swedish text exists.
 - Clinically relevant = ClinPGx level ≥ 3. All markers stay until the hybrid-capture runs show what can be called.
 
 Open items:
-- indel markers in the SNP section (CYP3A5\*7, IFNL4 ΔG/TT) are always "Ej bedömbar" (VEP vs VCF placement)
 - DPYD \*3/\*7 on ONT
 - HLA validation
 - "journal version" of the report (genotypes without drug text)
