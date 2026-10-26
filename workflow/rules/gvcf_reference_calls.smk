@@ -66,7 +66,13 @@ if _reference_calls_enabled:
             """
             ( cut -f1-3 {input.beds}
               for m in {input.markers}; do
-                  grep -v '^#' "$m" | awk -F'\\t' 'NR > 1 {{ print $3 "\\t" $4 - 1 "\\t" $4 }}'
+                  grep -v '^#' "$m" | awk -F'\\t' 'NR > 1 {{
+                      # SNV: the base itself; indel: also the anchor base before it
+                      snv = ($5 ~ /^[ACGT]$/ && $6 ~ /^[ACGT](,[ACGT])*$/)
+                      n = ($5 == "-") ? 1 : length($5)
+                      if (snv) print $3 "\\t" $4 - 1 "\\t" $4
+                      else     print $3 "\\t" $4 - 2 "\\t" $4 - 1 + n
+                  }}'
               done ) | sort -k1,1 -k2,2n -u > {output.bed}
             """
 

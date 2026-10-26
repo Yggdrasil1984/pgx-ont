@@ -35,6 +35,7 @@ if _snp_markers_enabled:
             markers = config["snp_markers"]["table"],
             vcf     = pharmcat_vcf,
             depth   = "results/coverage/{sample}_{type}.panel_depth.tsv.gz",
+            ref     = config["starphase"]["reference"],   # indel normalisation
         output:
             tsv = "results/snp/{sample}_{type}.snp_genotypes.tsv",
         params:

@@ -19,12 +19,16 @@ Rules (decided by Lars-Ola 2026-10-22 and 2026-10-26):
   - genotype from the VCF record (variant, or 0/0 from gVCF reference calls);
     without a record, depth >= the orange threshold (30 for ONT) means
     reference on both chromosomes
-  - ./. or depth below the threshold -> "Ej bedömbar (lågt läsdjup)"
+  - depth below the threshold -> "Ej bedömbar (lågt läsdjup)"; ./. with
+    enough depth (the caller is unsure) -> "Ej bedömbar (osäkert anrop)"
   - HGVS of the non-reference allele found, else of the clinical allele; an
     allele not in the marker table is flagged "annan allel"
-  - insertion/deletion markers (ref or alt not a single base) are not
-    matched against the VCF yet (VEP and VCF place them differently):
-    always "Ej bedömbar", note "indel: granska manuellt"
+  - insertion/deletion markers (ref or alt not a single base; the table
+    uses VEP style, "-" for an empty allele, insertion before pos) are
+    matched after normalising both the marker alleles and the VCF records
+    the way `bcftools norm` does (trim shared bases, add the anchor base,
+    left-align against the reference). A different variant overlapping the
+    marker gives "Ej bedömbar", note "annan variant vid markören"
 """
 
 import csv
@@ -35,7 +39,52 @@ from panel_coverage import depth_colour
 HETEROZYGOUS = "Heterozygot"
 HOMOZYGOUS = "Homozygot"
 NOT_ASSESSABLE = "Ej bedömbar (lågt läsdjup)"
+NOT_ASSESSABLE_UNCERTAIN = "Ej bedömbar (osäkert anrop)"
 NOT_ASSESSABLE_INDEL = "Ej bedömbar"
+
+
+class Fasta:
+    """Minimal reader for an uncompressed FASTA with a .fai index."""
+
+    def __init__(self, path):
+        self.path = path
+        self.index = {}
+        with open(path + ".fai") as fh:
+            for line in fh:
+                name, length, offset, line_bases, line_width = line.split("\t")[:5]
+                self.index[name] = (int(length), int(offset), int(line_bases), int(line_width))
+
+    def fetch(self, chrom, start, end):
+        """Bases start..end, 1-based inclusive, upper case."""
+        length, offset, line_bases, line_width = self.index[chrom]
+        start, end = max(start, 1), min(end, length)
+        first = offset + (start - 1) // line_bases * line_width + (start - 1) % line_bases
+        last = offset + (end - 1) // line_bases * line_width + (end - 1) % line_bases
+        with open(self.path) as fh:
+            fh.seek(first)
+            return fh.read(last - first + 1).replace("\n", "").replace("\r", "").upper()
+
+
+def normalise(chrom, pos, ref, alt, fetch):
+    """Left-aligned, parsimonious VCF form (pos, ref, alt), or None for ref == alt.
+
+    fetch(chrom, start, end) gives reference bases (1-based, inclusive).
+    "-" stands for an empty allele (VEP style)."""
+    ref, alt = ref.replace("-", "").upper(), alt.replace("-", "").upper()
+    if ref == alt:
+        return None
+    while True:
+        if ref and alt and ref[-1] == alt[-1]:
+            ref, alt = ref[:-1], alt[:-1]
+        elif not ref or not alt:
+            pos -= 1
+            base = fetch(chrom, pos, pos)
+            ref, alt = base + ref, base + alt
+        else:
+            break
+    while len(ref) > 1 and len(alt) > 1 and ref[0] == alt[0]:
+        ref, alt, pos = ref[1:], alt[1:], pos + 1
+    return pos, ref, alt
 
 
 def is_snv(marker):
@@ -55,9 +104,15 @@ def load_markers(path):
     return markers
 
 
+INDEL_WINDOW = 100
+
+
 def read_vcf(vcf_path, markers):
-    """PASS records at the marker positions: {(chrom, pos): (ref, alts, gt)}."""
-    wanted = {(m["chrom"], m["pos"]) for m in markers}
+    """PASS records at SNV marker positions and within INDEL_WINDOW bp of
+    indel markers: {(chrom, pos): (ref, alts, gt)}."""
+    wanted = {(m["chrom"], m["pos"]) for m in markers if is_snv(m)}
+    windows = [(m["chrom"], m["pos"] - INDEL_WINDOW, m["pos"] + INDEL_WINDOW)
+               for m in markers if not is_snv(m)]
     found = {}
     with gzip.open(vcf_path, "rt") as fh:
         for line in fh:
@@ -65,7 +120,9 @@ def read_vcf(vcf_path, markers):
                 continue
             f = line.rstrip("\n").split("\t")
             chrom, pos, ref, alts, filt = f[0], int(f[1]), f[3], f[4].split(","), f[6]
-            if (chrom, pos) not in wanted or filt not in ("PASS", "."):
+            near = (chrom, pos) in wanted or any(
+                c == chrom and lo <= pos <= hi for c, lo, hi in windows)
+            if not near or filt not in ("PASS", "."):
                 continue
             fmt, sample = f[8].split(":"), f[9].split(":")
             gt = dict(zip(fmt, sample)).get("GT", "./.")
@@ -108,8 +165,60 @@ def _genotype_bases(marker, record, depth, min_assessable):
     return [alleles[int(i)] for i in indices]
 
 
-def genotype_markers(markers, vcf_records, depths, thresholds):
-    """One result dict per marker, following the rules in the module docstring."""
+def _genotype_indel(marker, vcf_records, depth, min_assessable, fetch):
+    """(allele labels or None, note) for an insertion/deletion marker.
+
+    Labels are the marker table's alleles (ref, then alts), e.g. "-/A"."""
+    chrom, labels = marker["chrom"], [marker["ref"]] + marker["alts_list"]
+    wanted = {}
+    for label in marker["alts_list"]:
+        norm = normalise(chrom, marker["pos"], marker["ref"], label, fetch)
+        if norm:
+            wanted[norm] = label
+    span_lo = min(p for p, _, _ in wanted)
+    span_hi = max(p + len(r) - 1 for p, r, _ in wanted)
+
+    covering_ref = None
+    for (c, pos), (ref, alts, gt) in sorted(vcf_records.items()):
+        end = pos + len(ref) - 1
+        if c != chrom:
+            continue
+        real_alts = [a for a in alts if a not in (".", "<*>", "<NON_REF>", "*")]
+        if not real_alts:
+            if pos <= span_hi and end >= span_lo:
+                covering_ref = gt
+            continue
+        names = {}
+        for i, alt in enumerate(alts, start=1):
+            norm = normalise(c, pos, ref, alt, fetch) if alt in real_alts else None
+            if norm in wanted:
+                names[i] = wanted[norm]
+        if not names:
+            if pos <= span_hi and end >= span_lo:
+                return None, "annan variant vid markören: granska manuellt"
+            continue
+        indices = gt.replace("|", "/").split("/")
+        if len(indices) != 2 or not all(i.isdigit() for i in indices):
+            return None, ""
+        if any(int(i) > 0 and int(i) not in names for i in indices):
+            return None, "annan variant vid markören: granska manuellt"
+        return [labels[0] if i == "0" else names[int(i)] for i in indices], ""
+
+    if covering_ref is not None:
+        confident = covering_ref.replace("|", "/") == "0/0"
+        return ([labels[0]] * 2 if confident else None), ""
+    return ([labels[0]] * 2 if depth >= min_assessable else None), ""
+
+
+def _not_assessable(depth, min_assessable):
+    return NOT_ASSESSABLE if depth < min_assessable else NOT_ASSESSABLE_UNCERTAIN
+
+
+def genotype_markers(markers, vcf_records, depths, thresholds, fetch=None):
+    """One result dict per marker, following the rules in the module docstring.
+
+    fetch(chrom, start, end) gives reference bases; it is needed for indel
+    markers, which are reported as "Ej bedömbar" without it."""
     min_assessable = thresholds[2]
     results = []
     for m in markers:
@@ -122,6 +231,25 @@ def genotype_markers(markers, vcf_records, depths, thresholds):
         }
         defining = m.get("defining_allele") or m["clinical_alt"]
         result.update(defining_allele=defining, defining_name=m.get("defining_name", ""))
+        if not is_snv(m) and fetch is not None:
+            bases, note = _genotype_indel(m, vcf_records, depth, min_assessable, fetch)
+            if bases is None:
+                result.update(result=NOT_ASSESSABLE_INDEL if note else _not_assessable(depth, min_assessable),
+                              note=note, genotype="", copies="")
+                alt = m["clinical_alt"]
+            else:
+                result.update(
+                    result=HOMOZYGOUS if bases[0] == bases[1] else HETEROZYGOUS,
+                    genotype="/".join(bases),
+                    copies=bases.count(defining),
+                )
+                found = [b for b in bases if b != m["ref"]]
+                alt = found[0] if found else m["clinical_alt"]
+            c, p, _ = _hgvs_for(m, alt)
+            g = m["hgvsg"] if alt == m["clinical_alt"] else ""
+            result.update(hgvsc=c, hgvsp=p, hgvsg=g)
+            results.append(result)
+            continue
         if not is_snv(m):
             c, p, g = _hgvs_for(m, m["clinical_alt"])
             result.update(result=NOT_ASSESSABLE_INDEL, note="indel: granska manuellt",
@@ -131,7 +259,7 @@ def genotype_markers(markers, vcf_records, depths, thresholds):
             continue
         bases = _genotype_bases(m, vcf_records.get(key), depth, min_assessable)
         if bases is None:
-            result.update(result=NOT_ASSESSABLE, genotype="", copies="")
+            result.update(result=_not_assessable(depth, min_assessable), genotype="", copies="")
             alt = m["clinical_alt"]
         else:
             result.update(
@@ -167,6 +295,7 @@ if __name__ == "__main__":
         genotype_markers(markers,
                          read_vcf(snakemake.input.vcf, markers),
                          read_depths(snakemake.input.depth, markers),
-                         snakemake.params.thresholds),
+                         snakemake.params.thresholds,
+                         fetch=Fasta(snakemake.input.ref).fetch),
         snakemake.output.tsv,
     )
