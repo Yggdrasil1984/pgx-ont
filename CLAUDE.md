@@ -107,6 +107,11 @@ CYP2D6 regression pair (truth = GeT-RM consensus from the Coriell xlsx):
 
 - Full pgx end-to-end run succeeded for both Illumina and ONT. Integration test passes with StarPhase disabled.
 - PharmCAT 3.4.0 hand test on HG00276 (2026-10-19): CYP2D6 taken from StarPhase. 53 PGx positions were missing from the (non-gVCF) VCF, and HLA-A/B were uncalled (only CYP2D6 was in the StarPhase TSV). Other genes are not yet checked against a truth set.
+- **First full nallo → pgx run (2026-10-26)** on HG00276 panel reads (ONT, reads overlapping the panel; `~/projects/nallo_runs/hg00276_panel`, pgx side `~/projects/pgx_runs/hg00276_nallo`):
+  - CYP2D6 \*5/\*4 PM.
+  - With gVCF reference calls and SNV calling ±500 bp, **every PharmCAT panel gene matches the original WGS result**, incl. CYP3A4 \*1/\*2 and UGT1A1 \*1/\*80+\*28. Without padding, CYP3A4\*2 was missed (reported \*1/\*1) and UGT1A1\*28 was missing.
+  - Still not testable on ONT: DPYD \*3 (c.1898delC), \*7 (c.295_298delTCAT) and a few others. DeepVariant gives ./. (GQ 0) despite 55–90× with ≥ 82% reference reads.
+  - The DPYD amplicon pipeline does not cover them (only ~300 bp around rs75017182).
 
 ## Coverage colour scale (decided by Lars-Ola, 2026-10-20)
 
@@ -124,11 +129,30 @@ Reasoning: nallo users accept depth 30 for HiFi (Q > 30, 99.9% accurate reads). 
 
 ## Current focus (October 2026)
 
-Connect the pieces: nallo → StarPhase → PharmCAT → pgx report. Approved next steps (2026-10-20):
-1. StarPhase rule also writes `--pharmcat-tsv` (check that HLA-A/B are included).
-2. Two PharmCAT rules in Snakemake (preprocess, then PharmCAT with `-po`), tested on HG00276.
-3. pgx report reads PharmCAT JSON for genotypes, phenotypes and recommendations, keeps the coverage tables, and uses the colour scale above.
-Later: have nallo's DeepVariant emit a gVCF so "normal" and "not covered" can be told apart.
+The chain nallo → StarPhase → PharmCAT → pgx report is connected and runs end to end (2026-10-26). It is enabled per run with `starphase`, `pharmcat`, `panel_coverage`, `snp_markers` and `reference_calls` in the config, and `bam_source: nallo`. nallo templates are in `config/nallo/` (params, gVCF publishDir, `pad_bed.py`).
+
+Data kept outside the repo (drafts / local):
+- `~/reference/guidelines/swedish_guidelines.tsv` — Swedish texts, draft. Format: `config/templates/swedish_guidelines.example.tsv`.
+- `~/reference/panel/pgx_panel_v2_targets.bed` — named panel targets (Region Örebro län Twist design TE-98775480).
+- `~/reference/panel/snp_markers_draft.tsv` — 37 non-PharmCAT markers with HGVS and `defining_allele`.
+- `~/reference/panel/pharmcat_3.4.0_positions.bed`.
+
+Report rules decided by Lars-Ola:
+- Depth colours (above). A gene's colour comes from its targets with clinical positions.
+- 0/0 only with ≥ 30 reads.
+- SNP section: genotype + zygosity + copies of the defining allele.
+- "Ej testade alleler" shown per gene.
+- HLA not analysed (StarPhase HLA unvalidated).
+- English CPIC/DPWG text where no Swedish text exists.
+- Clinically relevant = ClinPGx level ≥ 3. All markers stay until the hybrid-capture runs show what can be called.
+
+Open items:
+- indel markers in the SNP section (CYP3A5\*7, IFNL4 ΔG/TT) are always "Ej bedömbar" (VEP vs VCF placement)
+- DPYD \*3/\*7 on ONT
+- HLA validation
+- "journal version" of the report (genotypes without drug text)
+- suggest to nallo (GMS) to publish the gVCF by default
+- run on real hybrid-capture data (2027)
 
 ## Longer-term (separate project)
 
