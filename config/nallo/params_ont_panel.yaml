@@ -1,0 +1,40 @@
+# nallo parameters for pgx: ONT panel data (hybrid capture), GRCh38.
+# Validated on HG00276 panel reads 2026-10-26 (all PharmCAT panel genes agree
+# with the whole-genome result). Replace the /path/to/ placeholders.
+#
+# Run (from the run folder):
+#   nextflow run genomic-medicine-sweden/nallo -profile singularity \
+#     -c /path/to/pgx/config/nallo/publish_gvcf.config \
+#     -params-file params_ont_panel.yaml -resume
+# On a machine with fewer than 12 cores, also pass a config with
+#   process { resourceLimits = [ cpus: <cores>, memory: <RAM>.GB, time: 48.h ] }
+
+preset: "ONT_R10"                     # ONT_R10_AS for adaptive sampling; revio/pacbio for HiFi
+input: "/path/to/samplesheet.csv"     # sample = pgx {sample}_{type}; sex must be 1 or 2 (sex check skipped)
+outdir: "/path/to/nallo_results"
+fasta: "/path/to/GRCh38_chr.fasta"
+par_regions: "/path/to/hs38.PAR.bed"  # GRCh38 PAR1/PAR2 on chrX (nallo test-datasets reference/hs38.PAR.bed)
+
+target_regions: "/path/to/panel_targets.bed"
+# Call SNVs in the targets +/-500 bp (decided by Lars-Ola 2026-10-26): VCF
+# anchors of indels (UGT1A1*28) and positions next to targets (CYP3A4*2) are
+# otherwise lost and PharmCAT reports them as normal or not testable.
+snv_call_regions: "/path/to/panel_targets_pad500.bed"
+
+sv_callers: "sniffles"                # HiFiCNV/Sawfish are HiFi-oriented and need CN files
+
+skip_sex_check: true
+skip_genome_assembly: true
+skip_snv_annotation: true
+skip_sv_annotation: true
+skip_rank_variants: true
+skip_repeat_calling: true
+skip_repeat_annotation: true
+skip_methylation_calling: true        # set false if reads carry MM/ML tags and methylation is wanted
+skip_methylation_annotation: true
+skip_call_paralogs: true              # Paraphase not used (StarPhase calls CYP2D6)
+skip_annotate_paralogs: true
+skip_prepare_gens_input: true
+skip_mitochondrial_calling: true
+skip_chromograph: true
+skip_peddy: true
