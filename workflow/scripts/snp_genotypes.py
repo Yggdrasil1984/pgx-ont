@@ -5,18 +5,23 @@ Plain SNP genotypes with HGVS names for markers outside PharmCAT.
 
 Inputs:
   markers  TSV (kept outside the repo): gene, rsid, chrom, pos, ref, alts,
-           clinical_alt, transcript, hgvsc, hgvsp, hgvsg, ... where alts,
-           hgvsc and hgvsp list all alternative alleles in the same order
+           clinical_alt, transcript, hgvsc, hgvsp, hgvsg, defining_allele,
+           defining_name, ... where alts, hgvsc and hgvsp list all alternative
+           alleles in the same order. defining_allele is the allele that
+           defines the marker; it may be the reference base (CYP3A4*1B).
   vcf      sample VCF (bgzipped), e.g. nallo's DeepVariant VCF
   depth    per-base depth from `samtools depth -a` (gzipped)
 
-Rules (decided by Lars-Ola 2026-10-22, while no gVCF is available):
-  - a PASS variant at the marker -> heterozygot / homozygot, HGVS of the
-    allele actually found; an allele not in the marker table is reported
-    with its genomic position and flagged "annan allel"
-  - no PASS variant and depth >= the orange threshold (30 for ONT)
-    -> "Ingen variant påvisad"
-  - no PASS variant and depth below it -> "Ej bedömbar (lågt läsdjup)"
+Rules (decided by Lars-Ola 2026-10-22 and 2026-10-26):
+  - the report gives the actual genotype (e.g. T/T), its zygosity
+    (homozygot = the same allele on both chromosomes, whichever allele) and
+    the number of copies of the defining allele
+  - genotype from the VCF record (variant, or 0/0 from gVCF reference calls);
+    without a record, depth >= the orange threshold (30 for ONT) means
+    reference on both chromosomes
+  - ./. or depth below the threshold -> "Ej bedömbar (lågt läsdjup)"
+  - HGVS of the non-reference allele found, else of the clinical allele; an
+    allele not in the marker table is flagged "annan allel"
   - insertion/deletion markers (ref or alt not a single base) are not
     matched against the VCF yet (VEP and VCF place them differently):
     always "Ej bedömbar", note "indel: granska manuellt"
@@ -27,9 +32,8 @@ import gzip
 
 from panel_coverage import depth_colour
 
-DETECTED_HET = "Heterozygot"
-DETECTED_HOM = "Homozygot"
-NOT_DETECTED = "Ingen variant påvisad"
+HETEROZYGOUS = "Heterozygot"
+HOMOZYGOUS = "Homozygot"
 NOT_ASSESSABLE = "Ej bedömbar (lågt läsdjup)"
 NOT_ASSESSABLE_INDEL = "Ej bedömbar"
 
@@ -92,6 +96,18 @@ def _hgvs_for(marker, alt):
     return c, p, g
 
 
+def _genotype_bases(marker, record, depth, min_assessable):
+    """[allele1, allele2] or None when not assessable."""
+    if record is None:
+        return [marker["ref"]] * 2 if depth >= min_assessable else None
+    ref, alts, gt = record
+    indices = gt.replace("|", "/").split("/")
+    if not all(i.isdigit() for i in indices) or len(indices) != 2:
+        return None
+    alleles = [ref] + alts
+    return [alleles[int(i)] for i in indices]
+
+
 def genotype_markers(markers, vcf_records, depths, thresholds):
     """One result dict per marker, following the rules in the module docstring."""
     min_assessable = thresholds[2]
@@ -109,22 +125,22 @@ def genotype_markers(markers, vcf_records, depths, thresholds):
                           hgvsc=m["hgvsc"], hgvsp=m["hgvsp"], hgvsg=m["hgvsg"])
             results.append(result)
             continue
-        record = vcf_records.get(key)
-        called = []
-        if record:
-            _, alts, gt = record
-            indices = [int(a) for a in gt.replace("|", "/").split("/") if a.isdigit()]
-            called = [alts[i - 1] for i in indices if i > 0]
-        if called:
-            alt = called[0]
-            result["result"] = DETECTED_HOM if len(called) == 2 and called[0] == called[1] else DETECTED_HET
-            if len(set(called)) > 1:
-                result["note"] = "två olika alternativa alleler"
-            if alt not in m["alts_list"]:
-                result["note"] = "annan allel än i markörtabellen"
-        else:
+        defining = m.get("defining_allele") or m["clinical_alt"]
+        result.update(defining_allele=defining, defining_name=m.get("defining_name", ""))
+        bases = _genotype_bases(m, vcf_records.get(key), depth, min_assessable)
+        if bases is None:
+            result.update(result=NOT_ASSESSABLE, genotype="", copies="")
             alt = m["clinical_alt"]
-            result["result"] = NOT_DETECTED if depth >= min_assessable else NOT_ASSESSABLE
+        else:
+            result.update(
+                result=HOMOZYGOUS if bases[0] == bases[1] else HETEROZYGOUS,
+                genotype="/".join(bases),
+                copies=bases.count(defining),
+            )
+            found = [b for b in bases if b != m["ref"]]
+            alt = found[0] if found else m["clinical_alt"]
+            if any(b not in m["alts_list"] for b in found):
+                result["note"] = "annan allel än i markörtabellen"
         result["hgvsc"], result["hgvsp"], result["hgvsg"] = _hgvs_for(m, alt)
         results.append(result)
     return results
