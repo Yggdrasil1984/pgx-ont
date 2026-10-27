@@ -94,6 +94,8 @@ Licenses: nallo MIT, StarPhase BSD-3-Clause-Clear, PharmCAT MPL-2.0, pgx GPL-3.
 
 - **samtools:** use `/usr/bin/samtools` (v1.22.1) explicitly. The `pgx` conda env contains an ancient samtools (v0.1.19) that shadows it.
 - **Running pgx on a run folder:** from the run folder, `conda run -n pgx snakemake -s ~/projects/pgx/workflow/Snakefile --configfile config/config.yaml nallo_run.yaml --cores 2 --use-singularity results/report/<sample>_<type>.pgx_report.html` (dry run with `-n` first).
+- **Snakemake 7 does not rerun after script edits**, and does not rebuild a missing intermediate file while the final report exists. Ask for the intermediate target directly (e.g. `results/gvcf/<s>_<t>.with_refcalls.vcf.gz`), then the report.
+- **PharmCAT discards indel reference records with ALT "."**: write PharmCAT's own ALT from `/pharmcat/pharmcat_positions.vcf` (done in `gvcf_reference_calls.py`).
 - **Unit tests:** in `workflow/scripts`, `conda run -n pgx python -m unittest discover -p '*_test.py'` (plain `python -m unittest` finds 0 tests).
 - **`conda run` does not pass stdin:** put Python in a file (scratchpad) instead of a heredoc.
 - **nallo:** the machine has 8 cores, so cap with `local_resources.config`; `skip_sex_check` needs a known sex in the samplesheet; needs `--par_regions` and `sv_callers: "sniffles"`; nallo does not publish the gVCF without `publish_gvcf.config`; the Nextflow JVM can hang after "Pipeline completed" (watch the log).
@@ -120,8 +122,9 @@ CYP2D6 regression pair (truth = GeT-RM consensus from the Coriell xlsx):
 - **First full nallo → pgx run (2026-10-26)** on HG00276 panel reads (ONT, reads overlapping the panel; `~/projects/nallo_runs/hg00276_panel`, pgx side `~/projects/pgx_runs/hg00276_nallo`):
   - CYP2D6 \*5/\*4 PM.
   - With gVCF reference calls and SNV calling ±500 bp, **every PharmCAT panel gene matches the original WGS result**, incl. CYP3A4 \*1/\*2 and UGT1A1 \*1/\*80+\*28. Without padding, CYP3A4\*2 was missed (reported \*1/\*1) and UGT1A1\*28 was missing.
-  - Still not testable on ONT: DPYD \*3 (c.1898delC), \*7 (c.295_298delTCAT) and a few others. DeepVariant gives ./. (GQ 0) despite 55–90× with ≥ 82% reference reads.
-  - The DPYD amplicon pipeline does not cover them (only ~300 bp around rs75017182).
+  - DPYD \*3 (c.1898delC) and \*7 (c.295_298delTCAT) were "not tested" until 2026-10-27. The cause was **not** DeepVariant: they had a confident 0/0 with 75/87 reads, but PharmCAT's preprocessor discards indel reference records whose ALT is "." (43 positions). Fixed by writing PharmCAT's own ALT (`pharmcat_positions.vcf` from the container). With that and the 95% read rule, 20 more alleles became testable (DPYD \*3/\*5/\*7, NUDT15 \*6/\*9/\*22, TPMT \*47, CYP2C9 \*6/\*25/\*85, 8 G6PD variants, …); no diplotype changed.
+  - Still not testable in DPYD: c.1682G>T, c.3049G>A, \*9B, c.1615G>A, c.61C>T, c.62G>A, c.632A>G (82–90% normal reads, below 95%).
+  - The DPYD amplicon pipeline only covers ~300 bp around rs75017182.
   - Note: the comparison is against the original WGS analysis of the same sample, not a truth set. Non-CYP2D6 genes still need GeT-RM/GIAB truth.
   - SNP section (2026-10-26): CYP3A4 rs2740574 T/T (0 copies of \*1B), MTHFR c.1286A>C heterozygous, CYP3A5\*7 -/- (71 reads). IFNL4 rs11322783 is "Ej bedömbar (osäkert anrop)": 64–66/68 reads show TT and none ΔG, but DeepVariant left chr19:39248515 as ./. (GQ 1).
 
@@ -137,7 +140,9 @@ Read depth per target/position in the report, for ONT:
 | 1–29 | red |
 | 0 | black |
 
-Reasoning: nallo users accept depth 30 for HiFi (Q > 30, 99.9% accurate reads). ONT reads average about Q20 (99%), range ~Q10–Q30, so roughly 100× is the ONT target. 24 samples per run will not reach that everywhere, hence the graded scale. HiFi can use lower thresholds, so the thresholds should be configurable per platform. Whether low coverage also blocks a "normal" call in the report is a separate clinical decision for Lars-Ola.
+Reasoning: nallo users accept depth 30 for HiFi (Q > 30, 99.9% accurate reads). ONT reads average about Q20 (99%), range ~Q10–Q30, so roughly 100× is the ONT target. 24 samples per run will not reach that everywhere, hence the graded scale. HiFi can use lower thresholds, so the thresholds are configurable per platform (`panel_coverage.thresholds`, key = `platform` in units.tsv).
+
+PacBio HiFi (decided by Lars-Ola, 2026-10-27), platform `PACBIO`: < 10 failed (red; 0 black), 10–19 warning (orange), 20–40 pass (pale green), > 40 over-sequenced (green). Config `[41, 20, 10, 1]`. Note: the orange limit is also the minimum depth for a 0/0 call and for "lågt läsdjup", so HiFi uses 10 reads there.
 
 ## Current focus (October 2026, updated 2026-10-27)
 
@@ -151,7 +156,8 @@ Data kept outside the repo (drafts / local):
 
 Report rules decided by Lars-Ola:
 - Depth colours (above). A gene's colour comes from its targets with clinical positions.
-- 0/0 only with ≥ 30 reads.
+- 0/0 only with ≥ 30 reads (ONT; the platform's orange limit).
+- **Read rule (2026-10-27):** where the caller is unsure, ≥ 95% normal reads with ≥ 30 reads counts as normal (`reference_calls.read_rule`). A read is normal if it has the reference at every base of the position and no insertion/deletion inside it. Marked INFO `PGX_READRULE`/`PGX_READS` in the VCF; the SNP section says "normal enligt läsandel (x % av n läsningar)".
 - SNP section: genotype + zygosity + copies of the defining allele.
 - "Ej testade alleler" shown per gene.
 - Not assessable is labelled by cause: "Ej bedömbar (lågt läsdjup)" = < 30 reads; "Ej bedömbar (osäkert anrop)" = ≥ 30 reads but the caller gave ./. (technical labelling, not a new threshold).
@@ -160,9 +166,9 @@ Report rules decided by Lars-Ola:
 - Clinically relevant = ClinPGx level ≥ 3. All markers stay until the hybrid-capture runs show what can be called.
 
 Open items:
-- DPYD \*3/\*7 and IFNL4 ΔG on ONT: DeepVariant leaves them ./. despite good depth and mostly reference reads. A rule like "≥ 95% reference reads with ≥ 30 reads = normal" would cover both. **Clinical decision for Lars-Ola.**
+- IFNL4 ΔG (rs11322783) on HG00276 is still not assessable: only 84% of reads are normal across all three bases (ONT noise next to a G run). Same for 7 DPYD positions (82–90%).
+- PharmCAT report: show which genes/positions were called by the read rule (only the SNP section says so today)
 - review the marker table: choice of clinical allele for #6/#13/#20/#31, scope of markers
-- HiFi coverage thresholds (not yet decided)
 - HLA validation
 - "journal version" of the report (genotypes without drug text)
 - suggest to nallo (GMS) to publish the gVCF by default
