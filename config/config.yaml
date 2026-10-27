@@ -112,7 +112,7 @@ panel_coverage:
   min_mapq: 0  # 0 = count all reads (mosdepth default)
   thresholds:  # lower limits for [green, pale green, orange, red]; 0 reads = black
     ONT: [100, 50, 30, 1]  # decided by Lars-Ola 2026-10-20
-    # PacBio: lower limits to be decided (HiFi is more accurate per read)
+    PACBIO: [41, 20, 10, 1]  # HiFi, decided by Lars-Ola 2026-10-27: <10 failed, 10-19 warning, 20-40 pass, >40 over-sequenced
 
 # ── Plain SNP genotypes with HGVS for markers outside PharmCAT ───────────────
 snp_markers:
