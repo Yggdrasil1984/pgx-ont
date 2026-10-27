@@ -19,6 +19,8 @@ Rules (decided by Lars-Ola 2026-10-22 and 2026-10-26):
   - genotype from the VCF record (variant, or 0/0 from gVCF reference calls);
     without a record, depth >= the orange threshold (30 for ONT) means
     reference on both chromosomes
+  - a 0/0 record set by the read rule (INFO PGX_READRULE, see
+    gvcf_reference_calls.py) gets the note "normal enligt läsandel"
   - depth below the threshold -> "Ej bedömbar (lågt läsdjup)"; ./. with
     enough depth (the caller is unsure) -> "Ej bedömbar (osäkert anrop)"
   - HGVS of the non-reference allele found, else of the clinical allele; an
@@ -126,7 +128,7 @@ def read_vcf(vcf_path, markers):
                 continue
             fmt, sample = f[8].split(":"), f[9].split(":")
             gt = dict(zip(fmt, sample)).get("GT", "./.")
-            found[(chrom, pos)] = (ref, alts, gt)
+            found[(chrom, pos)] = (ref, alts, gt, f[7])
     return found
 
 
@@ -157,7 +159,7 @@ def _genotype_bases(marker, record, depth, min_assessable):
     """[allele1, allele2] or None when not assessable."""
     if record is None:
         return [marker["ref"]] * 2 if depth >= min_assessable else None
-    ref, alts, gt = record
+    ref, alts, gt = record[:3]
     indices = gt.replace("|", "/").split("/")
     if not all(i.isdigit() for i in indices) or len(indices) != 2:
         return None
@@ -165,11 +167,23 @@ def _genotype_bases(marker, record, depth, min_assessable):
     return [alleles[int(i)] for i in indices]
 
 
+READ_RULE_NOTE = "normal enligt läsandel"
+
+
+def _read_rule_note(record):
+    """Note for a 0/0 record set by the read rule, e.g. "... (97 % av 68 läsningar)"."""
+    info = dict(kv.split("=", 1) for kv in (record[3] if len(record) > 3 else ".").split(";") if "=" in kv)
+    if "PGX_READRULE" not in info:
+        return ""
+    return f"{READ_RULE_NOTE} ({float(info['PGX_READRULE']) * 100:.0f} % av {info.get('PGX_READS', '?')} läsningar)"
+
+
 def _genotype_indel(marker, vcf_records, depth, min_assessable, fetch):
     """(allele labels or None, note) for an insertion/deletion marker.
 
     Labels are the marker table's alleles (ref, then alts), e.g. "-/A"."""
     chrom, labels = marker["chrom"], [marker["ref"]] + marker["alts_list"]
+    read_rule_used = ""
     wanted = {}
     for label in marker["alts_list"]:
         norm = normalise(chrom, marker["pos"], marker["ref"], label, fetch)
@@ -179,7 +193,8 @@ def _genotype_indel(marker, vcf_records, depth, min_assessable, fetch):
     span_hi = max(p + len(r) - 1 for p, r, _ in wanted)
 
     covering_ref = None
-    for (c, pos), (ref, alts, gt) in sorted(vcf_records.items()):
+    for (c, pos), record in sorted(vcf_records.items()):
+        ref, alts, gt = record[:3]
         end = pos + len(ref) - 1
         if c != chrom:
             continue
@@ -187,6 +202,7 @@ def _genotype_indel(marker, vcf_records, depth, min_assessable, fetch):
         if not real_alts:
             if pos <= span_hi and end >= span_lo:
                 covering_ref = gt
+                read_rule_used = read_rule_used or _read_rule_note(record)
             continue
         names = {}
         for i, alt in enumerate(alts, start=1):
@@ -202,11 +218,12 @@ def _genotype_indel(marker, vcf_records, depth, min_assessable, fetch):
             return None, ""
         if any(int(i) > 0 and int(i) not in names for i in indices):
             return None, "annan variant vid markören: granska manuellt"
-        return [labels[0] if i == "0" else names[int(i)] for i in indices], ""
+        note = _read_rule_note(record) if all(i == "0" for i in indices) else ""
+        return [labels[0] if i == "0" else names[int(i)] for i in indices], note
 
     if covering_ref is not None:
         confident = covering_ref.replace("|", "/") == "0/0"
-        return ([labels[0]] * 2 if confident else None), ""
+        return ([labels[0]] * 2 if confident else None), (read_rule_used if confident else "")
     return ([labels[0]] * 2 if depth >= min_assessable else None), ""
 
 
@@ -242,6 +259,7 @@ def genotype_markers(markers, vcf_records, depths, thresholds, fetch=None):
                     result=HOMOZYGOUS if bases[0] == bases[1] else HETEROZYGOUS,
                     genotype="/".join(bases),
                     copies=bases.count(defining),
+                    note=note,
                 )
                 found = [b for b in bases if b != m["ref"]]
                 alt = found[0] if found else m["clinical_alt"]
@@ -271,6 +289,8 @@ def genotype_markers(markers, vcf_records, depths, thresholds, fetch=None):
             alt = found[0] if found else m["clinical_alt"]
             if any(b not in m["alts_list"] for b in found):
                 result["note"] = "annan allel än i markörtabellen"
+            elif key in vcf_records:
+                result["note"] = _read_rule_note(vcf_records[key])
         result["hgvsc"], result["hgvsp"], result["hgvsg"] = _hgvs_for(m, alt)
         results.append(result)
     return results

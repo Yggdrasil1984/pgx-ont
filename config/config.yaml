@@ -123,3 +123,8 @@ snp_markers:
 reference_calls:
   enabled: false  # needs starphase.bam_source: nallo and nallo run with the gVCF publishDir config
   positions: ["/home/lars-ola-arvidsson/reference/panel/pharmcat_3.4.0_positions.bed"]  # SNP markers added automatically
+  read_rule:  # where the caller is unsure: reference if >= min_fraction of >= min_reads reads are normal (Lars-Ola 2026-10-27)
+    enabled: true
+    min_reads: 30
+    min_fraction: 0.95
+    min_mapq: 5  # same as DeepVariant's default

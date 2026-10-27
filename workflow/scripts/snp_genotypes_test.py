@@ -81,6 +81,17 @@ class TestSnpGenotypes(unittest.TestCase):
         rows = self._results({}, {("chr7", 600): 80})  # reference on both: C/C = 2 copies
         self.assertEqual((rows["rs2740574"]["genotype"], rows["rs2740574"]["copies"]), ("C/C", 2))
 
+    def test_read_rule_note(self):
+        rows = self._results({("chr1", 200): ("G", ["."], "0/0", "PGX_READRULE=0.971;PGX_READS=68")},
+                             {("chr1", 200): 68})
+        r = rows["rs1801133"]
+        self.assertEqual((r["genotype"], r["result"]), ("G/G", sg.HOMOZYGOUS))
+        self.assertEqual(r["note"], "normal enligt läsandel (97 % av 68 läsningar)")
+        rows = self._indel({("chr7", 499): ("TA", ["."], "0/0", "PGX_READRULE=0.960;PGX_READS=50")},
+                           {("chr7", 500): 80})
+        self.assertEqual(rows["rs41303343"]["genotype"], "-/-")
+        self.assertIn("normal enligt läsandel", rows["rs41303343"]["note"])
+
     def test_explicit_nocall_not_assessable(self):
         rows = self._results({("chr1", 200): ("G", ["."], "./.")}, {("chr1", 200): 90})
         self.assertEqual(rows["rs1801133"]["result"], sg.NOT_ASSESSABLE_UNCERTAIN)

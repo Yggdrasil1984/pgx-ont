@@ -21,6 +21,11 @@
 #   starphase.bam_source: "nallo"
 #   panel_coverage.enabled: true                        # thresholds
 #
+# Read rule (reference_calls.read_rule, Lars-Ola 2026-10-27): where the gVCF
+# is not a confident reference call, the reads are counted from the BAM
+# (samtools mpileup); >= 95% normal reads of >= 30 reads -> 0/0, marked
+# INFO PGX_READRULE / PGX_READS.
+#
 # OUTPUT:
 #   results/gvcf/{sample}_{type}.gvcf_expanded.vcf.gz   — gVCF, one record per base
 #   results/gvcf/{sample}_{type}.with_refcalls.vcf.gz   — VCF for PharmCAT/SNPs
@@ -29,6 +34,7 @@
 import glob as _glob
 
 _reference_calls_enabled = config.get("reference_calls", {}).get("enabled", False)
+_read_rule = config.get("reference_calls", {}).get("read_rule", {})
 
 
 def gvcf_chunks(wildcards):
@@ -98,16 +104,50 @@ if _reference_calls_enabled:
                     -R {input.bed} -Oz -o {output.expanded} {output.gvcf}) > {log} 2>&1
             """
 
+    rule pharmcat_positions_vcf:
+        """PharmCAT's own positions/alleles, taken from the container in use."""
+        output:
+            vcf = "results/gvcf/pharmcat_positions.vcf",
+        params:
+            sif = config["pharmcat"]["container"],
+        shell:
+            "apptainer exec {params.sif} cat /pharmcat/pharmcat_positions.vcf > {output.vcf}"
+
+    rule reference_pileup:
+        """Reads (with names) at the wanted positions, for the read rule."""
+        input:
+            bam = starphase_bam,
+            bai = starphase_bai,
+            bed = "results/gvcf/reference_positions.bed",
+            ref = config["starphase"]["reference"],
+        output:
+            pileup = temp("results/gvcf/{sample}_{type}.reference_pileup.tsv.gz"),
+        params:
+            samtools = config.get("panel_coverage", {}).get("samtools", "samtools"),
+            min_mapq = _read_rule.get("min_mapq", 5),
+        log:
+            "logs/gvcf/{sample}_{type}_reference_pileup.log",
+        shell:
+            """
+            ({params.samtools} mpileup -B -Q 0 -q {params.min_mapq} -d 0 --output-QNAME \\
+                -f {input.ref} -l {input.bed} {input.bam} | gzip > {output.pileup}) 2> {log}
+            """
+
     rule add_reference_calls:
-        """Phased variant VCF + reference records (depth rule), bgzipped and indexed."""
+        """Phased variant VCF + reference records (depth rule, read rule), bgzipped and indexed."""
         input:
             vcf       = starphase_vcf,
             gvcf      = "results/gvcf/{sample}_{type}.gvcf_expanded.vcf.gz",
             positions = ["results/gvcf/reference_positions.bed"],
+            pileup    = "results/gvcf/{sample}_{type}.reference_pileup.tsv.gz",
+            alleles   = "results/gvcf/pharmcat_positions.vcf",   # ALT for indel reference records
         output:
             plain = temp("results/gvcf/{sample}_{type}.with_refcalls.vcf"),
         params:
             min_depth = lambda wildcards: panel_coverage_thresholds(wildcards)[2],
+            read_rule = ({"min_reads": _read_rule.get("min_reads", 30),
+                          "min_fraction": _read_rule.get("min_fraction", 0.95)}
+                         if _read_rule.get("enabled", False) else {}),
         log:
             "logs/gvcf/{sample}_{type}_add_reference_calls.log",
         script:
