@@ -159,7 +159,7 @@ Data kept outside the repo (drafts / local):
 Report rules decided by Lars-Ola:
 - Depth colours (above). A gene's colour comes from its targets with clinical positions.
 - 0/0 only with ≥ 30 reads (ONT; the platform's orange limit).
-- **Read rule (2026-10-27):** where the caller is unsure, ≥ 95% normal reads with ≥ 30 reads counts as normal (`reference_calls.read_rule`). A read is normal if it has the reference at every base of the position and no insertion/deletion inside it. Marked INFO `PGX_READRULE`/`PGX_READS` in the VCF; the SNP section says "normal enligt läsandel (x % av n läsningar)".
+- **Read rule (2026-10-27):** where the caller is unsure, ≥ 95% normal reads with ≥ 30 reads counts as normal (`reference_calls.read_rule`). A read is normal if it has the reference at every base of the position and no insertion/deletion inside it. Marked INFO `PGX_READRULE`/`PGX_READS` in the VCF; the SNP section says "normal enligt läsandel (x % av n läsningar)", and the gene summary lists such PharmCAT positions per gene ("Normal enligt läsandel: rsID (x % av n läsningar)").
 - SNP section: genotype + zygosity + copies of the defining allele.
 - "Ej testade alleler" shown per gene.
 - Not assessable is labelled by cause: "Ej bedömbar (lågt läsdjup)" = < 30 reads; "Ej bedömbar (osäkert anrop)" = ≥ 30 reads but the caller gave ./. (technical labelling, not a new threshold).
@@ -169,7 +169,6 @@ Report rules decided by Lars-Ola:
 
 Open items:
 - IFNL4 ΔG (rs11322783) on HG00276 is still not assessable: only 84% of reads are normal across all three bases (ONT noise next to a G run). Same for 7 DPYD positions (82–90%).
-- PharmCAT report: show which genes/positions were called by the read rule (only the SNP section says so today)
 - review the marker table: scope of markers. (Clinical alleles #6/#13/#20/#31 approved 2026-10-28; #13 rs55965422 labelled "CYP3A5*3.005, tidigare *5", suballele number still to check against PharmVar. Possible later: flag rs55965422 without rs776746 on the same haplotype.)
 - HLA validation
 - "journal version" of the report (genotypes without drug text)
