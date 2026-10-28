@@ -153,6 +153,7 @@ Data kept outside the repo (drafts / local):
 - `~/reference/panel/pgx_panel_v2_targets.bed` — named panel targets (Region Örebro län Twist design TE-98775480).
 - `~/reference/panel/snp_markers_draft.tsv` — 37 non-PharmCAT markers with HGVS and `defining_allele`.
 - `~/reference/panel/pharmcat_3.4.0_positions.bed`.
+- `~/reference/panel/pgx_adaptive_sampling_flank5kb.bed` (capture libraries) and `..._flank20kb.bed` (native gDNA): MinKNOW adaptive-sampling targets, built with `config/adaptive_sampling/make_as_bed.py` from the panel BED + PharmCAT positions + SNP markers (2026-10-28). Use with the chr-prefixed GRCh38 in MinKNOW; nallo preset `ONT_R10_AS`. Comparison against hybrid capture planned.
 
 Report rules decided by Lars-Ola:
 - Depth colours (above). A gene's colour comes from its targets with clinical positions.
