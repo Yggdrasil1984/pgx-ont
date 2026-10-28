@@ -22,6 +22,13 @@ RefCall records with GT 0/0 are kept as before; RefCall records without a
 genotype (./.) that overlap a wanted position are replaced by the record
 decided here, so the read rule can apply.
 
+A 0/0 record that starts before a wanted position but spans it (e.g. a
+rejected deletion AG -> A one base earlier) does not stand for the position:
+PharmCAT only reads a record starting at its own position. Such a position
+still gets its own record, and the bases after the first one of a multi-base
+gVCF record are not a confident reference call (the deletion reads disagree
+with the reference there), so the read rule decides.
+
 At insertion/deletion positions the record carries PharmCAT's own ALT
 alleles (from pharmcat_positions.vcf, e.g. TG -> T for DPYD*3): PharmCAT's
 preprocessor discards an indel reference record whose ALT is ".".
@@ -64,7 +71,7 @@ def read_indel_alleles(vcf_path):
 
 
 def read_gvcf_bases(gvcf_path, chroms):
-    """{(chrom, pos): (ref_base, is_confident_ref, depth)} for single-base records."""
+    """{(chrom, pos): (ref_base, is_confident_ref, depth, record_pos)} per base."""
     bases = {}
     with gzip.open(gvcf_path, "rt") as fh:
         for line in fh:
@@ -80,7 +87,7 @@ def read_gvcf_bases(gvcf_path, chroms):
             depth = int(depth) if depth.isdigit() else 0
             confident_ref = gt == "0/0"
             for offset, base in enumerate(ref):
-                bases.setdefault((f[0], int(f[1]) + offset), (base, confident_ref, depth))
+                bases.setdefault((f[0], int(f[1]) + offset), (base, confident_ref, depth, int(f[1])))
     return bases
 
 
@@ -153,7 +160,9 @@ def reference_record(chrom, start, end, bases, min_depth, support=None, read_rul
         return None
     ref = "".join(b[0] for b in span)
     depth = min(b[2] for b in span)
-    confident = all(b[1] for b in span) and depth >= min_depth
+    # a base inside a multi-base record counts only if that record is this position
+    first = [b[3] in (pos, start + 1) for pos, b in zip(range(start + 1, end + 1), span)]
+    confident = all(b[1] for b in span) and all(first) and depth >= min_depth
     info = "."
     if not confident and support and read_rule:
         reads, normal = support.get((chrom, start, end), (0, 0))
@@ -186,12 +195,16 @@ def merge(variant_vcf, gvcf_bases, positions, min_depth, out_path, support=None,
     # DeepVariant RefCalls without a genotype at wanted positions are decided below instead
     records = [r for r in records
                if r[6] != "RefCall" or r[9].startswith("0/0") or not bases_of(r) & wanted]
+    # A record at the position itself, or a call other than 0/0 overlapping it,
+    # stands; a 0/0 record that only overlaps from an earlier base does not.
+    starts = {(r[0], int(r[1])) for r in records}
     covered = set()
     for r in records:
-        covered |= bases_of(r)
+        if not r[9].startswith("0/0") and not r[9].startswith("0|0"):
+            covered |= bases_of(r)
     added = []
     for chrom, start, end in sorted(positions):
-        if any((chrom, pos) in covered for pos in range(start + 1, end + 1)):
+        if (chrom, start + 1) in starts or any((chrom, pos) in covered for pos in range(start + 1, end + 1)):
             continue
         record = reference_record(chrom, start, end, gvcf_bases, min_depth, support, read_rule, alleles)
         if record:

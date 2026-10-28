@@ -148,6 +148,32 @@ class TestGvcfReferenceCalls(unittest.TestCase):
         self.assertEqual(rec[("chr1", "60")][6], "RefCall")
         self.assertIn(("chr1", "90"), rec)   # RefCall away from wanted positions is kept
 
+    def test_refcall_from_earlier_base_does_not_hide_position(self):
+        # CYP3A4*13 on HG00276: RefCall 0/0 AG -> A at chr1:46 spans the SNV
+        # position chr1:47. The SNV still gets its own record; its base is the
+        # tail of the deletion record, so only the read rule can call it 0/0.
+        refcall = "chr1\t46\t.\tAG\tA\t0\tRefCall\t.\tGT:DP\t0/0:79\n"
+        vcf = _gz(HEADER + refcall)
+        bases = grc.read_gvcf_bases(_gz(HEADER + refcall), {"chr1"})
+        rule = {"min_reads": 30, "min_fraction": 0.95}
+        for support, gt in (((80, 69), "./.:79"), ((80, 78), "0/0:80")):
+            out = NamedTemporaryFile("w", suffix=".vcf", delete=False)
+            out.close()
+            grc.merge(vcf, bases, {("chr1", 46, 47)}, 30, out.name, {("chr1", 46, 47): support}, rule)
+            with open(out.name) as fh:
+                rec = {(r[0], r[1]): r for r in (l.split("\t") for l in fh if not l.startswith("#"))}
+            self.assertEqual(rec[("chr1", "46")][6], "RefCall")
+            self.assertEqual(rec[("chr1", "47")][3], "G")
+            self.assertEqual(rec[("chr1", "47")][9].strip(), gt)
+
+    def test_variant_from_earlier_base_still_blocks(self):
+        # a real deletion over the position: no reference record is added
+        vcf = _gz(HEADER + "chr1\t46\t.\tAG\tA\t30\tPASS\t.\tGT:DP\t0/1:79\n")
+        bases = grc.read_gvcf_bases(_gz(HEADER + "chr1\t46\t.\tAG\tA\t30\tPASS\t.\tGT:DP\t0/1:79\n"), {"chr1"})
+        out = NamedTemporaryFile("w", suffix=".vcf", delete=False)
+        out.close()
+        self.assertEqual(grc.merge(vcf, bases, {("chr1", 46, 47)}, 30, out.name), 0)
+
     def test_indel_position_gets_pharmcat_alleles(self):
         # PharmCAT rejects an indel reference record with ALT "."; chr1:20-21 is a
         # deletion site (CT -> C) in PharmCAT's positions file, chr2:5 a SNV
