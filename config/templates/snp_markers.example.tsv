@@ -1,0 +1,42 @@
+# EXEMPEL/UTKAST (Region Halland, 2026-10-28): ej kliniskt godkänd. Kliniska alleler för #6/#13/#20/#31 godkända av Lars-Ola 2026-10-28.
+# UTKAST: SNP-markörer utanför PharmCAT, från panel-BED + Ensembl VEP (MANE Select). Granskas av Lars-Ola.
+# alts/hgvsc/hgvsp: alla alternativa alleler i samma ordning; clinical_alt = varianten som visas när inget påvisas.
+# defining_allele: allelen som definierar markören (kan vara referensbasen, t.ex. CYP3A4*1B); rapporten räknar dess kopior.
+gene	rsid	chrom	pos	ref	alts	clinical_alt	transcript	hgvsc	hgvsp	hgvsg	consequence	note	defining_allele	defining_name
+MTHFR	rs1801131	chr1	11794419	T	G	G	NM_005957.5	c.1286A>C	p.Glu429Ala	NC_000001.11:g.11794419T>G	missense_variant		G	
+MTHFR	rs1801133	chr1	11796321	G	A,C	A	NM_005957.5	c.665C>T,c.665C>G	p.Ala222Val,p.Ala222Gly	NC_000001.11:g.11796321G>A	missense_variant	gnomAD AF A=0.2752	A	
+F5	rs6025	chr1	169549811	C	A,T	T	NM_000130.5	c.1601G>T,c.1601G>A	p.Arg534Leu,p.Arg534Gln	NC_000001.11:g.169549811C>T	missense_variant	gnomAD AF T=0.0173	T	
+UGT1A6	rs17863783	chr2	233693631	G	T	T	NM_001072.4	c.627G>T	p.Val209=	NC_000002.12:g.233693631G>T	synonymous_variant		T	
+BCHE	rs1803274	chr3	165773492	C	T	T	NM_000055.4	c.1699G>A	p.Ala567Thr	NC_000003.12:g.165773492C>T	missense_variant		T	
+BCHE	rs28933390	chr3	165829781	C	A,G,T	A	NM_000055.4	c.1253G>T,c.1253G>C,c.1253G>A	p.Gly418Val,p.Gly418Ala,p.Gly418Asp	NC_000003.12:g.165829781C>A	missense_variant	gnomAD AF A=0.0031	A	
+BCHE	rs1799807	chr3	165830741	T	C	C	NM_000055.4	c.293A>G	p.Asp98Gly	NC_000003.12:g.165830741T>C	missense_variant		C	
+UGT2B15	rs1902023	chr4	68670366	A	C	C	NM_001076.4	c.253T>G	p.Tyr85Asp	NC_000004.12:g.68670366A>C	missense_variant		C	
+ADRB2	rs1042713	chr5	148826877	G	A,C	A	NM_000024.6	c.46G>A,c.46G>C	p.Gly16Arg,p.Gly16Arg	NC_000005.10:g.148826877G>A	missense_variant	gnomAD AF A=0.4259	A	
+CYP3A5	rs28365083	chr7	99652613	G	T	T	NM_000777.5	c.1193C>A	p.Thr398Asn	NC_000007.14:g.99652613G>T	missense_variant		T	
+CYP3A5	rs41303343	chr7	99652771	-	A	A	NM_000777.5	c.1035dup	p.Thr346TyrfsTer3		frameshift_variant		A	
+CYP3A5	rs56411402	chr7	99665237	T	C	C	NM_000777.5	c.599A>G	p.Gln200Arg	NC_000007.14:g.99665237T>C	missense_variant	panelnamn ZSCAN25, ligger i CYP3A5	C	
+CYP3A5	rs55965422	chr7	99666950	A	G,T	G	NM_000777.5	c.432+2T>C,c.432+2T>A		NC_000007.14:g.99666950A>G	splice_donor_variant	gnomAD AF G=0.0003; ligger alltid på *3-haplotypen – fenotyp anges av PharmCAT (rs776746)	G	CYP3A5*3.005, tidigare *5
+CYP3A4	rs2242480	chr7	99763843	C	T	T	NM_017460.6	c.1026+12G>A		NC_000007.14:g.99763843C>T	intron_variant		T	
+CYP3A4	rs4646437	chr7	99767460	G	A	A	NM_017460.6	c.671-202C>T		NC_000007.14:g.99767460G>A	intron_variant		A	
+CYP3A4	rs2740574	chr7	99784473	C	T	T	NM_017460.5	c.-392G>A		NC_000007.14:g.99784473C>T	upstream_gene_variant	Referensbasen C definierar *1B (ClinPGx PA166157367; *1B är suballel i PharmVar). HGVS från ClinPGx.	C	CYP3A4*1B
+SLC28A3	rs7853758	chr9	84286011	G	A,T	A	NM_001199633.2	c.1381C>T,c.1381C>A	p.Leu461=,p.Leu461Met	NC_000009.12:g.84286011G>A	missense_variant,synonymous_variant	gnomAD AF A=0.1871	A	
+CYP2C9	rs9332094	chr10	94936917	T	C	C				NC_000010.11:g.94936917T>C	upstream_gene_variant		C	
+CYP2C8	rs10509681	chr10	95038992	T	C	C	NM_000770.3	c.1196A>G	p.Lys399Arg	NC_000010.11:g.95038992T>C	missense_variant		C	
+CYP2C8	rs11572103	chr10	95058349	T	A,G	A	NM_000770.3	c.805A>T,c.805A>C	p.Ile269Phe,p.Ile269Leu	NC_000010.11:g.95058349T>A	missense_variant	gnomAD AF A=0.0461	A	
+F2	rs1799963	chr11	46739505	G	A	A	NM_000506.5	c.*97G>A		NC_000011.10:g.46739505G>A	3_prime_UTR_variant		A	
+GRIK4	rs1954787	chr11	120792654	T	C	C	NM_014619.5	c.83-10039T>C		NC_000011.10:g.120792654T>C	intron_variant		C	
+RARG	rs2229774	chr12	53211761	G	A	A	NM_000966.6	c.1280C>T	p.Ser427Leu	NC_000012.12:g.53211761G>A	missense_variant		A	
+ALDH2	rs671	chr12	111803962	G	A	A	NM_000690.4	c.1510G>A	p.Glu504Lys	NC_000012.12:g.111803962G>A	missense_variant		A	
+CYP1A2	rs2069514	chr15	74745879	G	A	A				NC_000015.10:g.74745879G>A	upstream_gene_variant		A	
+CYP1A2	rs2069526	chr15	74749000	T	G	G	NM_000761.5	c.-10+103T>G		NC_000015.10:g.74749000T>G	intron_variant		G	
+CYP1A2	rs762551	chr15	74749576	C	A,G	A	NM_000761.5	c.-9-154C>A,c.-9-154C>G		NC_000015.10:g.74749576C>A	intron_variant	gnomAD AF A=0.6723	A	
+CYP1A2	rs4646427	chr15	74753351	T	C	C	NM_000761.5	c.1253+81T>C		NC_000015.10:g.74753351T>C	intron_variant		C	
+VKORC1	rs7294	chr16	31091000	C	T	T	NM_024006.6	c.*134G>A		NC_000016.10:g.31091000C>T	3_prime_UTR_variant		T	
+VKORC1	rs2359612	chr16	31092475	A	G,T	G	NM_024006.6	c.283+837T>C,c.283+837T>A		NC_000016.10:g.31092475A>G	intron_variant	gnomAD AF G=0.6494	G	
+VKORC1	rs8050894	chr16	31093188	C	A,G,T	G	NM_024006.6	c.283+124G>T,c.283+124G>C,c.283+124G>A		NC_000016.10:g.31093188C>G	intron_variant	gnomAD AF G=0.3769	G	
+VKORC1	rs9934438	chr16	31093557	G	A,C	A	NM_024006.6	c.174-136C>T,c.174-136C>G		NC_000016.10:g.31093557G>A	intron_variant	gnomAD AF A=0.3189	A	
+VKORC1	rs2884737	chr16	31094233	A	C	C	NM_024006.6	c.173+324T>G		NC_000016.10:g.31094233A>C	intron_variant		C	
+IFNL3	rs11881222	chr19	39244283	A	G	G	NM_172139.4	c.259-126T>C		NC_000019.10:g.39244283A>G	intron_variant		G	
+IFNL4	rs11322783	chr19	39248514	TT	G,T	G	ENST00000606380.2	c.65_66delinsC,c.66del	p.Glu22AlafsTer159,p.Gly23AlafsTer158	NC_000019.10:g.39248514_39248515delinsG	frameshift_variant	IFNL4 ΔG/TT; ersätter rs368234815 (retired, enl. Lars-Ola). Ingen MANE Select för IFNL4; Ensembl canonical.	G	IFNL4 ΔG
+IFNL3	rs8099917	chr19	39252525	T	G	G				NC_000019.10:g.39252525T>G	downstream_gene_variant		G	
+SLC19A1	rs1051266	chr21	45537880	T	C,G	C	NM_194255.4	c.80A>G,c.80A>C	p.His27Arg,p.His27Pro	NC_000021.9:g.45537880T>C	missense_variant	gnomAD AF C=0.5179	C	
