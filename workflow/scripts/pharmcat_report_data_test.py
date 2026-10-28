@@ -123,6 +123,21 @@ class TestPharmcatReportData(unittest.TestCase):
         ]}, ".json")
         self.assertEqual(prd.load_uncallable(path), {"CYP3A4": ["*10", "*2"], "TPMT": [], "NUDT15": []})
 
+    def test_load_read_rule_calls(self):
+        vcf = NamedTemporaryFile("w", suffix=".vcf", delete=False)
+        vcf.write("##x\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tS\n"
+                  "chr1\t100\t.\tT\t.\t.\tPASS\tPGX_READRULE=0.966;PGX_READS=58\tGT\t0/0\n"
+                  "chr1\t200\t.\tG\t.\t.\tPASS\t.\tGT\t0/0\n"
+                  "chr2\t300\t.\tA\t.\t.\tPASS\tPGX_READRULE=0.950;PGX_READS=40\tGT\t0/0\n")
+        vcf.close()
+        match = _write({"results": [
+            {"gene": "DPYD", "chromosome": "chr1", "variants": [
+                {"position": 100, "rsid": "rs1801159"}, {"position": 200, "rsid": "rs2"}]},
+            {"gene": "TPMT", "chromosome": "chr6", "variants": [{"position": 300, "rsid": "rs3"}]},
+        ]}, ".json")
+        self.assertEqual(prd.load_read_rule_calls(vcf.name, match),
+                         {"DPYD": [{"rsid": "rs1801159", "position": 100, "fraction": 0.966, "reads": 58}]})
+
     def test_english_recommendations(self):
         recs = prd.english_recommendations(_write(REPORT_JSON, ".json"), skip_genes={"TPMT"})
         keys = sorted((r["drug"], r["source"]) for r in recs)

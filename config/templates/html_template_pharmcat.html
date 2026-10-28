@@ -691,7 +691,7 @@ Där svensk text saknas visas CPIC/DPWG-riktlinjer på engelska. HLA-A och HLA-B
   <td>{{ g.activity_score }}</td>
   <td>{{ g.source }}</td>
   <td>{% if g.coverage %}<span class="cov cov-{{ g.coverage }}">{{ g.coverage_label }}</span>{% endif %}</td>
-  <td>{% if g.status == "OK" %}{% if g.coverage_warning %}<span class="flag">Kontrollera läsdjup</span>{% endif %}{% if g.uncallable %}{% if g.coverage_warning %}<br>{% endif %}<span class="flag">Ej testade alleler:</span> <span style="font-size:0.85em;" title="{{ g.uncallable|join(', ') }}">{{ g.uncallable[:10]|join(", ") }}{% if g.uncallable|length > 10 %} (+{{ g.uncallable|length - 10 }} till){% endif %}</span>{% endif %}{% else %}<span class="muted">{{ g.status }}</span>{% endif %}</td>
+  <td>{% if g.status == "OK" %}{% if g.coverage_warning %}<span class="flag">Kontrollera läsdjup</span>{% endif %}{% if g.uncallable %}{% if g.coverage_warning %}<br>{% endif %}<span class="flag">Ej testade alleler:</span> <span style="font-size:0.85em;" title="{{ g.uncallable|join(', ') }}">{{ g.uncallable[:10]|join(", ") }}{% if g.uncallable|length > 10 %} (+{{ g.uncallable|length - 10 }} till){% endif %}</span>{% endif %}{% if g.read_rule %}{% if g.coverage_warning or g.uncallable %}<br>{% endif %}<strong>Normal enligt läsandel:</strong> <span style="font-size:0.85em;">{% for r in g.read_rule %}{{ r.rsid }} ({{ "%.0f"|format(r.fraction * 100) }} % av {{ r.reads }} läsningar){% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}{% else %}<span class="muted">{{ g.status }}</span>{% endif %}</td>
 </tr>
 {% endfor %}
 </tbody>
@@ -699,6 +699,7 @@ Där svensk text saknas visas CPIC/DPWG-riktlinjer på engelska. HLA-A och HLA-B
 <p class="muted" style="font-size:0.85em;">
 Läsdjup visar sämsta färg bland genens mål, bedömt vid de kliniska positionerna i varje mål.
 "Ej testade alleler" kunde inte bedömas (positionen saknas eller har för lågt läsdjup); diplotypen utesluter dem inte.
+"Normal enligt läsandel": varianten anropades inte säkert, men tillräckligt stor andel av läsningarna visade normal sekvens (läsandelsregeln, standard minst 95 % av minst 30 läsningar), så positionen räknas som normal.
 För CYP2D6 halveras läsdjupet vid en gendeletion (*5); läs det tillsammans med kopienumret nedan.
 </p>
 </div>

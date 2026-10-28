@@ -70,13 +70,16 @@ def add_coverage(gene_calls, coverage):
 
 def build_report(phenotype_json, report_json, match_json, swedish_tsv, starphase_csv, starphase_json,
                  coverage_tsv, template, sample, platform, thresholds,
-                 not_analysed=("HLA-A", "HLA-B"), sources=("CPIC", "DPWG"), snp_tsv=None):
+                 not_analysed=("HLA-A", "HLA-B"), sources=("CPIC", "DPWG"), snp_tsv=None, vcf=None):
     gene_calls = prd.load_gene_calls(phenotype_json, not_analysed=set(not_analysed))
     coverage = read_coverage(coverage_tsv)
     gene_calls = add_coverage(gene_calls, coverage)
     uncallable = prd.load_uncallable(match_json)
+    read_rule = prd.load_read_rule_calls(vcf, match_json) if vcf else {}
     for call in gene_calls:
-        call["uncallable"] = uncallable.get(call["gene"], []) if call["status"] == prd.STATUS_OK else []
+        ok = call["status"] == prd.STATUS_OK
+        call["uncallable"] = uncallable.get(call["gene"], []) if ok else []
+        call["read_rule"] = read_rule.get(call["gene"], []) if ok else []
 
     guidelines = prd.load_swedish_guidelines(swedish_tsv)
     called = [c for c in gene_calls if c["status"] == prd.STATUS_OK]
@@ -127,6 +130,7 @@ if __name__ == "__main__":
         thresholds=snakemake.params.thresholds,
         sources=snakemake.params.sources,
         snp_tsv=getattr(snakemake.input, "snps", None),
+        vcf=getattr(snakemake.input, "vcf", None),
     )
     with open(snakemake.output.html, "w", encoding="utf-8") as fh:
         fh.write(html)

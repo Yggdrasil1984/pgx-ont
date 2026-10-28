@@ -22,6 +22,7 @@ Swedish table format (tab-separated, '#' lines are comments):
 """
 
 import csv
+import gzip
 import json
 
 # Swedish names used by the interpretation group for PharmCAT phenotypes.
@@ -102,6 +103,39 @@ def load_uncallable(match_json):
     with open(match_json) as fh:
         results = json.load(fh).get("results", [])
     return {r["gene"]: sorted(r.get("uncallableHaplotypes") or []) for r in results}
+
+
+def load_read_rule_calls(vcf_path, match_json):
+    """{gene: [{rsid, position, fraction, reads}]} for PharmCAT positions set
+    to 0/0 by the read rule (INFO PGX_READRULE, see gvcf_reference_calls.py).
+
+    The gene and rsID come from PharmCAT's match JSON, so only positions
+    PharmCAT actually used are listed.
+    """
+    opener = gzip.open if vcf_path.endswith(".gz") else open
+    by_pos = {}
+    with opener(vcf_path, "rt") as fh:
+        for line in fh:
+            if line.startswith("#") or "PGX_READRULE" not in line:
+                continue
+            f = line.rstrip("\n").split("\t")
+            info = dict(kv.partition("=")[::2] for kv in f[7].split(";"))
+            by_pos[(f[0], int(f[1]))] = (float(info["PGX_READRULE"]), int(info.get("PGX_READS", 0)))
+
+    with open(match_json) as fh:
+        results = json.load(fh).get("results", [])
+    calls = {}
+    for r in results:
+        for v in r.get("variants") or []:
+            hit = by_pos.get((r.get("chromosome"), v["position"]))
+            if hit:
+                calls.setdefault(r["gene"], []).append({
+                    "rsid": v.get("rsid") or f"{r['chromosome']}:{v['position']}",
+                    "position": v["position"],
+                    "fraction": hit[0],
+                    "reads": hit[1],
+                })
+    return calls
 
 
 def _parse_match(match):
