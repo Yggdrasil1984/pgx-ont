@@ -114,6 +114,11 @@ panel_coverage:
     ONT: [100, 50, 30, 1]  # decided by Lars-Ola 2026-10-20
     PACBIO: [41, 20, 10, 1]  # HiFi, decided by Lars-Ola 2026-10-27: <10 failed, 10-19 warning, 20-40 pass, >40 over-sequenced
 
+# ── PharmCAT positions outside the enriched panel region ─────────────────────
+off_target:
+  enabled: false  # needs pharmcat, panel_coverage, reference_calls; nallo snv_call_regions widened (config/nallo/pad_bed.py)
+  enriched_pad: 500  # targets +/- this many bp count as enriched and go to PharmCAT; the rest is listed separately (Lars-Ola 2026-10-28)
+
 # ── Plain SNP genotypes with HGVS for markers outside PharmCAT ───────────────
 snp_markers:
   enabled: false

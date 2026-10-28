@@ -58,7 +58,7 @@ if _pharmcat_enabled:
         representation, and list PGx positions that are missing.
         """
         input:
-            vcf = pharmcat_vcf,
+            vcf = pharmcat_input_vcf,   # enriched region only when off_target is enabled
         output:
             vcf     = "results/pharmcat/{sample}_{type}.preprocessed.vcf.bgz",
             missing = "results/pharmcat/{sample}_{type}.missing_pgx_var.vcf",
@@ -162,7 +162,9 @@ if _pharmcat_enabled:
             starphase_csv  = "results/starphase/{sample}_{type}_cyp2d6_result.csv",
             starphase_json = "results/starphase/{sample}_{type}_starphase.json",
             coverage       = "results/coverage/{sample}_{type}.panel_coverage.tsv",
-            vcf            = pharmcat_vcf,
+            vcf            = pharmcat_input_vcf,
+            **({"off_target": "results/off_target/{sample}_{type}.off_target.tsv"}
+               if config.get("off_target", {}).get("enabled", False) else {}),
             **({"snps": "results/snp/{sample}_{type}.snp_genotypes.tsv"}
                if config.get("snp_markers", {}).get("enabled", False) else {}),
             swedish        = config["pharmcat"]["swedish_guidelines"],
@@ -174,6 +176,7 @@ if _pharmcat_enabled:
             platform   = sample_platform,
             thresholds = panel_coverage_thresholds,
             sources    = config["pharmcat"].get("guideline_sources", ["CPIC", "DPWG"]),
+            enriched_pad = config.get("off_target", {}).get("enriched_pad", 500),
         log:
             "logs/report/{sample}_{type}_pgx_report.log",
         script:

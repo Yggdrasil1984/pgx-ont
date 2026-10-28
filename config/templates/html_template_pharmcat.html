@@ -645,6 +645,7 @@ color: #faa21a;
     <li><a href="#engelska-rekommendationer">Riktlinjer CPIC/DPWG (engelska)</a></li>
     <li><a href="#CYP2D6">CYP2D6</a></li>
     {% if snps %}<li><a href="#ovriga-markorer">Övriga markörer</a></li>{% endif %}
+    {% if off_target %}<li><a href="#utanfor-panelen">Utanför panelens mål</a></li>{% endif %}
     <li><a href="#lasdjup">Läsdjup per mål</a></li>
     </ul>
     </div>
@@ -691,7 +692,7 @@ Där svensk text saknas visas CPIC/DPWG-riktlinjer på engelska. HLA-A och HLA-B
   <td>{{ g.activity_score }}</td>
   <td>{{ g.source }}</td>
   <td>{% if g.coverage %}<span class="cov cov-{{ g.coverage }}">{{ g.coverage_label }}</span>{% endif %}</td>
-  <td>{% if g.status == "OK" %}{% if g.coverage_warning %}<span class="flag">Kontrollera läsdjup</span>{% endif %}{% if g.uncallable %}{% if g.coverage_warning %}<br>{% endif %}<span class="flag">Ej testade alleler:</span> <span style="font-size:0.85em;" title="{{ g.uncallable|join(', ') }}">{{ g.uncallable[:10]|join(", ") }}{% if g.uncallable|length > 10 %} (+{{ g.uncallable|length - 10 }} till){% endif %}</span>{% endif %}{% if g.read_rule %}{% if g.coverage_warning or g.uncallable %}<br>{% endif %}<strong>Normal enligt läsandel:</strong> <span style="font-size:0.85em;">{% for r in g.read_rule %}{{ r.rsid }} ({{ "%.0f"|format(r.fraction * 100) }} % av {{ r.reads }} läsningar){% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}{% else %}<span class="muted">{{ g.status }}</span>{% endif %}</td>
+  <td>{% if g.status == "OK" %}{% if g.coverage_warning %}<span class="flag">Kontrollera läsdjup</span>{% endif %}{% if g.uncallable %}{% if g.coverage_warning %}<br>{% endif %}<span class="flag">Ej testade alleler:</span> <span style="font-size:0.85em;" title="{{ g.uncallable|join(', ') }}">{{ g.uncallable[:10]|join(", ") }}{% if g.uncallable|length > 10 %} (+{{ g.uncallable|length - 10 }} till){% endif %}</span>{% endif %}{% if g.read_rule %}{% if g.coverage_warning or g.uncallable %}<br>{% endif %}<strong>Normal enligt läsandel:</strong> <span style="font-size:0.85em;">{% for r in g.read_rule %}{{ r.rsid }} ({{ "%.0f"|format(r.fraction * 100) }} % av {{ r.reads }} läsningar){% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}{% else %}<span class="muted">{{ g.status }}</span>{% endif %}{% if g.off_target %}<br>{% if g.off_target.variants %}<span class="flag">Variant utanför panelen</span> {% endif %}<a href="#utanfor-{{ g.gene }}" style="font-size:0.85em;">Utanför panelen: {{ g.off_target.rows|length }} pos.</a>{% endif %}</td>
 </tr>
 {% endfor %}
 </tbody>
@@ -799,6 +800,56 @@ Med läsdjup &lt; {{ thresholds[2] }} eller osäkert anrop anges positionen som 
 {% endfor %}
 </tbody>
 </table>
+</div>
+{% endif %}
+
+{% if off_target %}
+<div id="utanfor-panelen" class="section level1">
+<h1>Utanför panelens mål</h1>
+<p class="muted" style="font-size:0.85em;">
+PharmCAT-positioner utanför de anrikade regionerna (panelens mål &plusmn; {{ enriched_pad }} bp). Långa läsningar når ofta
+längre än proberna, så positionerna kan ha läsningar trots att de inte anrikas. De ingår <strong>inte</strong> i
+diplotyperna ovan och redovisas här per position som bonusfynd. Med läsdjup &lt; {{ thresholds[2] }} visas ändå vad som
+hittades (rött); det är inte ett säkert anrop. En variant här ska bekräftas innan den används kliniskt.
+"Ej anropad" = läsningar finns men positionen ligger utanför variantanropets region.
+</p>
+<table class="table table-striped" style="margin-left:auto;margin-right:auto;">
+<thead><tr><th>Gen</th><th>Positioner</th><th>Normal</th><th>Variant</th><th>Lågt läsdjup</th><th>Ej bedömbar / ej anropad / ej täckt</th></tr></thead>
+<tbody>
+{% for o in off_target %}
+<tr>
+  <td><a href="#utanfor-{{ o.gene }}"><strong>{{ o.gene }}</strong></a></td>
+  <td>{{ o.rows|length }}</td>
+  <td>{{ o.counts.get("Normal", 0) }}</td>
+  <td>{% if o.variants %}<span class="flag">{{ o.variants }}</span>{% else %}0{% endif %}</td>
+  <td>{{ o.counts.get("Lågt läsdjup", 0) }}</td>
+  <td>{{ o.counts.get("Ej bedömbar (osäkert anrop)", 0) }} / {{ o.counts.get("Ej anropad", 0) }} / {{ o.counts.get("Ej täckt", 0) }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% for o in off_target %}
+<div id="utanfor-{{ o.gene }}">
+<button class="collapsible">{{ o.gene }} &mdash; {{ o.rows|length }} position{% if o.rows|length != 1 %}er{% endif %} utanför panelen{% if o.variants %} ({{ o.variants }} variant{% if o.variants > 1 %}er{% endif %}){% endif %}</button>
+<div class="content" style="overflow:auto;">
+<table class="table table-striped" style="margin-left:auto;margin-right:auto;">
+<thead><tr><th>rsID</th><th>Position</th><th>Alleler</th><th>Genotyp</th><th>Läsdjup</th><th>Bedömning</th></tr></thead>
+<tbody>
+{% for r in o.rows %}
+<tr>
+  <td>{{ r.rsid }}</td>
+  <td>{{ r.chrom }}:{{ r.pos }}</td>
+  <td style="font-size:0.85em;">{{ r.alleles }}</td>
+  <td><strong>{{ r.genotype }}</strong></td>
+  <td><span class="cov cov-{{ r.colour }}">{{ r.depth }}</span></td>
+  <td>{% if r.status in ("Variant", "Lågt läsdjup") %}<span class="flag">{{ r.status }}</span>{% elif r.status == "Normal" %}{{ r.status }}{% else %}<span class="muted">{{ r.status }}</span>{% endif %}{% if r.note %}<br><span class="muted" style="font-size:0.85em;">{{ r.note }}</span>{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+{% endfor %}
 </div>
 {% endif %}
 

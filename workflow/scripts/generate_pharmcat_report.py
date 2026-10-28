@@ -7,6 +7,8 @@ details), the Swedish guideline table and per-target panel coverage.
 Rules for the gene summary:
 - a PharmCAT gene with no target in the panel is "Ej analyserad"
   (PharmCAT reports something for every gene, but the panel never saw it)
+- PharmCAT positions outside the enriched region are listed per gene in
+  their own section (off_target_calls.py); the gene row only points there
 - a gene's colour comes from its targets with clinical positions (all
   targets only if it has none); a called gene whose worst such target is
   red or black is flagged
@@ -25,6 +27,7 @@ import pharmcat_report_data as prd  # noqa: E402
 from panel_coverage import worst_colour  # noqa: E402
 from generate_pgx_report import load_cyp2d6_result  # noqa: E402
 from snp_genotypes import read_results as read_snp_results  # noqa: E402
+import off_target_calls as otc  # noqa: E402
 
 STATUS_NOT_IN_PANEL = "Ej analyserad (ingår ej i panelen)"
 WARN_COLOURS = ("red", "black")
@@ -68,9 +71,24 @@ def add_coverage(gene_calls, coverage):
     return gene_calls
 
 
+def group_off_target(rows):
+    """[{gene, rows, counts}] per gene, in gene order; counts per status."""
+    genes = {}
+    for r in rows:
+        genes.setdefault(r["gene"], []).append(r)
+    grouped = []
+    for gene, gene_rows in genes.items():
+        counts = {}
+        for r in gene_rows:
+            counts[r["status"]] = counts.get(r["status"], 0) + 1
+        grouped.append({"gene": gene, "rows": gene_rows, "counts": counts,
+                        "variants": counts.get(otc.VARIANT, 0)})
+    return grouped
+
+
 def build_report(phenotype_json, report_json, match_json, swedish_tsv, starphase_csv, starphase_json,
                  coverage_tsv, template, sample, platform, thresholds,
-                 not_analysed=("HLA-A", "HLA-B"), sources=("CPIC", "DPWG"), snp_tsv=None, vcf=None):
+                 not_analysed=("HLA-A", "HLA-B"), sources=("CPIC", "DPWG"), snp_tsv=None, vcf=None, off_target_tsv=None, enriched_pad=500):
     gene_calls = prd.load_gene_calls(phenotype_json, not_analysed=set(not_analysed))
     coverage = read_coverage(coverage_tsv)
     gene_calls = add_coverage(gene_calls, coverage)
@@ -80,6 +98,11 @@ def build_report(phenotype_json, report_json, match_json, swedish_tsv, starphase
         ok = call["status"] == prd.STATUS_OK
         call["uncallable"] = uncallable.get(call["gene"], []) if ok else []
         call["read_rule"] = read_rule.get(call["gene"], []) if ok else []
+
+    off_target = group_off_target(otc.read_tsv(off_target_tsv)) if off_target_tsv else []
+    by_gene_off = {o["gene"]: o for o in off_target}
+    for call in gene_calls:
+        call["off_target"] = by_gene_off.get(call["gene"])
 
     guidelines = prd.load_swedish_guidelines(swedish_tsv)
     called = [c for c in gene_calls if c["status"] == prd.STATUS_OK]
@@ -111,6 +134,8 @@ def build_report(phenotype_json, report_json, match_json, swedish_tsv, starphase
             cyp2d6=load_cyp2d6_result(starphase_csv),
             coverage=coverage,
             snps=read_snp_results(snp_tsv) if snp_tsv else [],
+            off_target=off_target,
+            enriched_pad=enriched_pad,
         )
     return html
 
@@ -131,6 +156,8 @@ if __name__ == "__main__":
         sources=snakemake.params.sources,
         snp_tsv=getattr(snakemake.input, "snps", None),
         vcf=getattr(snakemake.input, "vcf", None),
+        off_target_tsv=getattr(snakemake.input, "off_target", None),
+        enriched_pad=snakemake.params.enriched_pad,
     )
     with open(snakemake.output.html, "w", encoding="utf-8") as fh:
         fh.write(html)

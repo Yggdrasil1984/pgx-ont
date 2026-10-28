@@ -21,6 +21,7 @@ include: "rules/pharmcat_positions.smk"
 include: "rules/panel_coverage.smk"
 include: "rules/gvcf_reference_calls.smk"
 include: "rules/snp_genotypes.smk"
+include: "rules/off_target.smk"
 include: "rules/pharmcat.smk"
 
 
