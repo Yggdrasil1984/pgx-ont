@@ -65,11 +65,12 @@ Everything after nallo is platform-independent. The platform (`ONT` or `PACBIO` 
 |---|---|---|---|
 | `starphase_cyp2d6.smk` | `starphase_diplotype`, `starphase_parse_cyp2d6` | `pbstarphase diplotype` on haplotagged BAM + phased VCF. Also writes `--pharmcat-tsv` | `results/starphase/{s}_{t}_starphase.json`, `_pharmcat.tsv`, `_cyp2d6_result.csv` |
 | `panel_coverage.smk` | `panel_depth`, `panel_coverage` | `samtools depth -a` over the panel targets. Colour per target from the **lowest depth at a clinical (PharmCAT) position** inside it | `results/coverage/{s}_{t}.panel_depth.tsv.gz`, `.panel_coverage.tsv` |
-| `gvcf_reference_calls.smk` | `reference_positions`, `gvcf_expand`, `pharmcat_positions_vcf`, `reference_pileup`, `add_reference_calls`, `bgzip_reference_calls` | Adds explicit 0/0 or ./. records at every PharmCAT and SNP-marker position the variant VCF lacks (see §3) | `results/gvcf/{s}_{t}.with_refcalls.vcf.gz` |
+| `pharmcat_positions.smk` | `pharmcat_positions_vcf`, `pharmcat_positions_bed` | Extracts PharmCAT's positions from the container in use; `"pharmcat"` in the config selects the BED | `results/gvcf/pharmcat_positions.vcf`, `.bed` |
+| `gvcf_reference_calls.smk` | `reference_positions`, `gvcf_expand`, `reference_pileup`, `add_reference_calls`, `bgzip_reference_calls` | Adds explicit 0/0 or ./. records at every PharmCAT and SNP-marker position the variant VCF lacks (see §3) | `results/gvcf/{s}_{t}.with_refcalls.vcf.gz` |
 | `snp_genotypes.smk` | `snp_genotypes` | Genotypes markers outside PharmCAT from a marker table (HGVS, zygosity, copies of the defining allele). Indels are normalised against the reference before matching | `results/snp/{s}_{t}.snp_genotypes.tsv` |
 | `pharmcat.smk` | `pharmcat_preprocess`, `pharmcat_outside_calls`, `pharmcat_run`, `generate_pharmcat_report` | PharmCAT in two stages, with StarPhase's CYP2D6 as an outside call, then the Swedish report | `results/pharmcat/*.json`, `results/report/{s}_{t}.pgx_report.html` |
 
-Include order in `workflow/Snakefile`: … `starphase_cyp2d6`, `panel_coverage`,
+Include order in `workflow/Snakefile`: … `starphase_cyp2d6`, `pharmcat_positions`, `panel_coverage`,
 `gvcf_reference_calls`, `snp_genotypes`, `pharmcat`. All of them are off by default in
 `config/config.yaml` and are switched on per run.
 
@@ -131,7 +132,7 @@ PharmCAT's preprocessor **silently discards indel reference records whose ALT is
 On HG00276 that made DPYD \*3 and \*7 "not tested" even though the gVCF had confident 0/0
 calls. That affected 43 positions. Reference records at indel positions therefore carry
 PharmCAT's own ALT alleles, read from `/pharmcat/pharmcat_positions.vcf` inside the
-container (rule `pharmcat_positions_vcf`).
+container (rule `pharmcat_positions_vcf` in `pharmcat_positions.smk`).
 
 ### SNV calling with ±500 bp padding
 nallo calls SNVs in the panel targets ±500 bp (`snv_call_regions`, made with
@@ -273,8 +274,8 @@ cd workflow/scripts && conda run -n pgx python -m unittest discover -p '*_test.p
 
 Plain `python -m unittest` finds 0 tests. The helper scripts have their own tests:
 `config/adaptive_sampling/make_as_bed_test.py` and
-`config/panel/make_public_panel_bed_test.py` (run `python3 -m unittest` in each folder). The integration test in `.tests/integration`
-covers the original pgx path (StarPhase and the nallo modules disabled).
+`config/panel/make_public_panel_bed_test.py` (run `python3 -m unittest` in each folder).
+The integration test in `.tests/integration` covers the original pgx path (StarPhase and the nallo modules disabled).
 
 ### Adaptive sampling BED (optional)
 `config/adaptive_sampling/make_as_bed.py` builds a MinKNOW target BED from the panel BED,
