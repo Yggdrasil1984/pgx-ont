@@ -20,6 +20,19 @@ TPMT, CYP2D6, CYP2C19, and DPYD.
 
 ---
 
+## Current workflow: nallo → StarPhase → PharmCAT → Swedish report
+
+![pgx metro map](images/pgx_metromap.png)
+
+Since October 2026 the main path uses [nallo](https://github.com/genomic-medicine-sweden/nallo)
+for alignment, variant calling and phasing, StarPhase for CYP2D6 and PharmCAT for the other
+genes. pgx adds coverage QC, gVCF reference calls, SNP markers and the Swedish report. How
+it is built, how to run it, and its current limitations are described in
+[`README_pgx_nallo_workflow.md`](README_pgx_nallo_workflow.md). The rest of this document
+describes the earlier Clair3-based adaptation, which is still in the pipeline.
+
+---
+
 ## Why ONT?
 
 Short-read Illumina sequencing has fundamental limitations for pharmacogenomics:
@@ -271,6 +284,9 @@ The HTML report includes:
 ---
 
 ## ⚠️ Known limitations
+
+These apply to the Clair3 path below. For the nallo path, see
+`README_pgx_nallo_workflow.md`, section 5.
 
 ### 1. One platform per sample per run
 
