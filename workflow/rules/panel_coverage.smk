@@ -12,7 +12,7 @@
 #   panel_coverage:
 #     enabled:    true
 #     target_bed: "/path/to/panel_targets.bed"   # BED4, name = GENE or GENE|rsID
-#     clinical_positions: "/path/to/positions.bed" # e.g. PharmCAT positions; decide the colour
+#     clinical_positions: "pharmcat"  # or a BED; "pharmcat" = generated from the container
 #     samtools:   "/usr/bin/samtools"
 #     min_mapq:   0          # 0 = count all reads (as mosdepth's default)
 #     thresholds:            # lower limits for [green, pale green, orange, red]
@@ -69,7 +69,7 @@ if _panel_coverage_enabled:
         """Summarise depth per target and assign the colour."""
         input:
             bed   = config["panel_coverage"]["target_bed"],
-            positions = config["panel_coverage"]["clinical_positions"],
+            positions = positions_bed(config["panel_coverage"]["clinical_positions"]),
             depth = "results/coverage/{sample}_{type}.panel_depth.tsv.gz",
         output:
             tsv = "results/coverage/{sample}_{type}.panel_coverage.tsv",

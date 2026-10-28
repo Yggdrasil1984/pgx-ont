@@ -17,7 +17,7 @@
 # PREREQUISITES (config.yaml):
 #   reference_calls:
 #     enabled: true
-#     positions: ["/path/to/pharmcat_positions.bed"]   # SNP markers are added
+#     positions: ["pharmcat"]   # "pharmcat" = generated from the container; SNP markers are added
 #   starphase.bam_source: "nallo"
 #   panel_coverage.enabled: true                        # thresholds
 #
@@ -64,7 +64,7 @@ if _reference_calls_enabled:
     rule reference_positions:
         """Union of PharmCAT positions and SNP-marker positions as one BED."""
         input:
-            beds    = config["reference_calls"]["positions"],
+            beds    = [positions_bed(p) for p in config["reference_calls"]["positions"]],
             markers = config.get("snp_markers", {}).get("table", []) if config.get("snp_markers", {}).get("enabled", False) else [],
         output:
             bed = "results/gvcf/reference_positions.bed",
@@ -103,15 +103,6 @@ if _reference_calls_enabled:
              && apptainer exec {params.sif} bcftools convert --gvcf2vcf -f {input.ref} \\
                     -R {input.bed} -Oz -o {output.expanded} {output.gvcf}) > {log} 2>&1
             """
-
-    rule pharmcat_positions_vcf:
-        """PharmCAT's own positions/alleles, taken from the container in use."""
-        output:
-            vcf = "results/gvcf/pharmcat_positions.vcf",
-        params:
-            sif = config["pharmcat"]["container"],
-        shell:
-            "apptainer exec {params.sif} cat /pharmcat/pharmcat_positions.vcf > {output.vcf}"
 
     rule reference_pileup:
         """Reads (with names) at the wanted positions, for the read rule."""
