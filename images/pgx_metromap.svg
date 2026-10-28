@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 2300 920" width="2300" height="920">
+  <title>pgx metro map: nallo → StarPhase → PharmCAT → Swedish report</title>
+  <defs>
+    <style>
+      text { font-family: "Noto Sans", Ubuntu, "DejaVu Sans", "Liberation Sans", Arial, sans-serif; fill: #1a1a1a; }
+      .box { fill: #e6e7e8; }
+      .upstream { fill: #eef0f1; stroke: #b9bcbf; stroke-width: 2; stroke-dasharray: 10 6; }
+      .title { font-size: 21px; font-weight: 700; }
+      .sub { font-size: 16px; fill: #555; }
+      .lbl { font-size: 20px; }
+      .mid { text-anchor: middle; }
+      .small { font-size: 16px; fill: #444; }
+      .ft { font-size: 15px; font-weight: 700; fill: #fff; text-anchor: middle; }
+      .line { fill: none; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+      .regions { stroke: #24b064; }
+      .reads { stroke: #1f6fb5; }
+      .aligned { stroke: #11a9e6; }
+      .variants { stroke: #f8b043; }
+      .results { stroke: #ef5a28; }
+      .files { stroke: #c49a6c; }
+      .alt { stroke-dasharray: 2 14; stroke-width: 9; }
+    </style>
+    <g id="station"><circle r="13" fill="#fff" stroke="#000" stroke-width="5"/></g>
+    <g id="bar"><rect x="-3" y="-18" width="6" height="36" fill="#000"/></g>
+    <g id="page">
+      <path d="M-20,-26 h27 l13,13 v39 h-40 z" fill="#fff" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M7,-26 v13 h13" fill="none" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+    </g>
+  </defs>
+
+  <rect width="2300" height="920" fill="#fff"/>
+
+  <!-- ───────── boxes ───────── -->
+  <rect class="box" x="160" y="30" width="740" height="210" rx="10"/>
+  <text class="title" x="178" y="62">target regions</text>
+
+  <rect class="upstream" x="160" y="262" width="740" height="438" rx="10"/>
+  <text class="title" x="178" y="294">nallo</text>
+  <text class="sub" x="545" y="294">presets ONT_R10 · ONT_R10_AS · revio</text>
+  <text class="small" x="178" y="680">pgx uses: haplotagged BAM · phased VCF · gVCF (publish_gvcf.config)</text>
+
+  <rect class="box" x="940" y="30" width="520" height="210" rx="10"/>
+  <text class="title" x="958" y="62">coverage QC</text>
+
+  <rect class="box" x="940" y="262" width="520" height="110" rx="10"/>
+  <text class="title" x="1000" y="294">CYP2D6</text>
+
+  <rect class="box" x="940" y="392" width="520" height="308" rx="10"/>
+  <text class="title" x="1000" y="424">reference calls</text>
+  <text class="small" x="958" y="684">0/0 if confident with ≥ 30 reads, or ≥ 95 % normal reads</text>
+
+  <rect class="box" x="1500" y="262" width="380" height="290" rx="10"/>
+  <text class="title" x="1518" y="294">PharmCAT</text>
+
+  <rect class="box" x="1500" y="572" width="380" height="128" rx="10"/>
+  <text class="title" x="1518" y="604">SNP markers</text>
+
+  <rect class="box" x="1920" y="30" width="270" height="670" rx="10"/>
+  <text class="title" x="1938" y="62">report</text>
+
+  <!-- ───────── lines (drawn under stations) ───────── -->
+  <!-- adaptive sampling (alternative path) -->
+  <path class="line regions alt" d="M150,170 C195,170 190,90 235,90 H790"/>
+  <!-- panel BED: to coverage QC, and padded ±500 bp into nallo -->
+  <path class="line regions" d="M105,170 H1270 Q1300,170 1300,145"/>
+  <path class="line regions" d="M490,170 Q520,170 520,200 V437"/>
+
+  <!-- reads -->
+  <path class="line reads" d="M105,450 H300"/>
+  <path class="line aligned" d="M300,450 H520"/>
+  <path class="line aligned" d="M520,444 H940 Q970,444 970,414 V160 Q970,130 1000,130 H1060"/>
+  <path class="line aligned" d="M970,362 Q970,330 1002,330 H1160"/>
+  <path class="line aligned" d="M930,444 Q958,444 958,472 V610 Q958,640 988,640 H1060"/>
+  <!-- variants -->
+  <path class="line variants" d="M520,456 H1600"/>
+  <path class="line variants" d="M950,456 Q982,456 982,426 V374 Q982,342 1014,342 H1160"/>
+  <path class="line variants" d="M520,463 V530 Q520,560 550,560 H1060"/>
+  <text class="small" x="700" y="548">gVCF</text>
+  <path class="line variants" d="M1060,560 H1258 Q1288,560 1288,530 V470"/>
+  <path class="line variants" d="M1300,456 H1380 Q1410,456 1410,486 V610 Q1410,640 1440,640 H1700"/>
+  <path class="line variants" d="M1600,456 H1800"/>
+  <!-- pileup, depth, outside call -->
+  <path class="line files" d="M1060,640 H1282 Q1312,640 1312,610 V470"/>
+  <path class="line files" d="M1060,130 H2010 Q2040,130 2040,160 V443"/>
+  <path class="line files" d="M1160,336 H1770 Q1800,336 1800,366 V443"/>
+  <text class="small" x="1520" y="326">outside call (CYP2D6)</text>
+  <!-- results -->
+  <path class="line results" d="M1800,456 H2185"/>
+  <path class="line results" d="M1700,640 H2010 Q2040,640 2040,610 V469"/>
+
+  <!-- ───────── inputs and outputs ───────── -->
+  <use href="#bar" x="100" y="170"/>
+  <use href="#page" x="55" y="170"/>
+  <rect x="27" y="160" width="46" height="21" rx="3" fill="#000"/><text class="ft" x="50" y="176">bed</text>
+  <text class="small mid" x="55" y="222">panel</text>
+
+  <use href="#bar" x="100" y="450"/>
+  <use href="#page" x="51" y="443"/>
+  <use href="#page" x="57" y="452"/>
+  <rect x="24" y="443" width="56" height="21" rx="3" fill="#000"/><text class="ft" x="52" y="459">fastq</text>
+  <text class="small mid" x="55" y="505">ONT or</text>
+  <text class="small mid" x="55" y="525">HiFi</text>
+
+  <use href="#bar" x="795" y="90"/>
+  <use href="#page" x="845" y="90"/>
+  <rect x="817" y="80" width="46" height="21" rx="3" fill="#000"/><text class="ft" x="840" y="96">bed</text>
+  <text class="small mid" x="845" y="140">MinKNOW</text>
+
+  <use href="#bar" x="2190" y="456"/>
+  <use href="#page" x="2242" y="456"/>
+  <rect x="2210" y="446" width="56" height="21" rx="3" fill="#000"/><text class="ft" x="2238" y="462">html</text>
+
+  <!-- ───────── stations ───────── -->
+  <use href="#station" x="640" y="90"/>
+  <text class="lbl mid" x="640" y="66">make_as_bed.py · flank 5 / 20 kb</text>
+  <text class="small mid" x="640" y="128">adaptive sampling (optional)</text>
+
+  <use href="#station" x="520" y="208"/>
+  <text class="lbl" x="545" y="215">pad_bed.py ±500 bp</text>
+
+  <use href="#station" x="300" y="450"/>
+  <text class="lbl mid" x="300" y="492">minimap2</text>
+  <use href="#station" x="520" y="450"/>
+  <text class="lbl" x="540" y="425">DeepVariant</text>
+  <use href="#station" x="740" y="450"/>
+  <text class="lbl mid" x="740" y="492">WhatsHap / LongPhase</text>
+  <text class="small mid" x="740" y="514">phase · haplotag</text>
+
+  <use href="#station" x="1060" y="130"/>
+  <text class="lbl mid" x="1060" y="104">samtools depth</text>
+  <use href="#station" x="1300" y="130"/>
+  <text class="lbl mid" x="1300" y="104">panel_coverage</text>
+  <text class="small mid" x="1300" y="212">colour per target</text>
+
+  <use href="#station" x="1160" y="336"/>
+  <text class="lbl" x="1186" y="318">StarPhase</text>
+  <text class="small" x="1186" y="364">diplotype incl. *5, xN, hybrids</text>
+
+  <use href="#station" x="1060" y="560"/>
+  <text class="lbl mid" x="1060" y="600">bcftools</text>
+  <use href="#station" x="1060" y="640"/>
+  <text class="lbl" x="1086" y="626">samtools mpileup</text>
+  <use href="#station" x="1300" y="456"/>
+  <text class="lbl mid" x="1300" y="430">add reference calls</text>
+
+  <use href="#station" x="1600" y="456"/>
+  <text class="lbl mid" x="1600" y="498">preprocessor</text>
+  <use href="#station" x="1800" y="456"/>
+  <text class="lbl mid" x="1800" y="498">PharmCAT</text>
+  <text class="small mid" x="1800" y="520">CPIC · DPWG</text>
+
+  <use href="#station" x="1700" y="640"/>
+  <text class="lbl mid" x="1700" y="682">snp_genotypes</text>
+
+  <use href="#station" x="2040" y="456"/>
+  <text class="lbl" x="2062" y="500">Swedish</text>
+  <text class="lbl" x="2062" y="524">report</text>
+
+  <!-- ───────── legend and footer ───────── -->
+  <g transform="translate(178,760)">
+    <path class="line regions" d="M0,0 H60"/><text class="lbl" x="76" y="7">regions</text>
+    <path class="line reads" d="M260,0 H320"/><text class="lbl" x="336" y="7">unaligned reads</text>
+    <path class="line aligned" d="M560,0 H620"/><text class="lbl" x="636" y="7">aligned reads</text>
+    <path class="line variants" d="M860,0 H920"/><text class="lbl" x="936" y="7">variants</text>
+    <path class="line results" d="M0,44 H60"/><text class="lbl" x="76" y="51">results</text>
+    <path class="line files" d="M260,44 H320"/><text class="lbl" x="336" y="51">QC / other files</text>
+    <path class="line regions alt" d="M560,44 H620"/><text class="lbl" x="636" y="51">optional path</text>
+    <rect class="upstream" x="860" y="30" width="60" height="28" rx="5"/><text class="lbl" x="936" y="51">upstream (nallo)</text>
+  </g>
+  <text class="small" x="178" y="870">pgx · branch nanopore-adaptation · Region Halland · 2026-10-28</text>
+  <text class="small" x="178" y="894">Licences: nallo MIT · StarPhase BSD-3-Clause-Clear · PharmCAT MPL-2.0 · pgx GPL-3</text>
+</svg>
