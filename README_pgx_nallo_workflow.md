@@ -178,11 +178,39 @@ CYP3A4\*1B, CYP3A5\*7, …). Indel markers are normalised (anchor base, left-ali
   - StarPhase database (pre-built `pbstarphase_20251002.json` from the pb-StarPhase repo;
     `pbstarphase build` does not work offline)
   - `hs38.PAR.bed` for nallo
-- Not in the repo: you need your own copies (see §5).
-  - panel target BED (BED4, name `GENE` or `GENE|rsID`)
-  - PharmCAT positions BED
-  - SNP marker table
-  - Swedish guideline texts (format: `config/templates/swedish_guidelines.example.tsv`)
+- Panel and text files (all in the repo except a capture-design BED):
+
+| File | Where to get it |
+|---|---|
+| Panel target BED (BED4, name `GENE` or `GENE\|rsID`) | Your capture design, or build a public one with `config/panel/make_public_panel_bed.py` (below) |
+| PharmCAT positions | Generated from the PharmCAT container: set `"pharmcat"` in the config (rule `pharmcat_positions_bed`) |
+| SNP marker table | `config/templates/snp_markers.example.tsv` (37 markers, draft) |
+| Swedish guideline texts | `config/templates/swedish_guidelines.draft.tsv` (22 rows, draft, not approved); format described in `swedish_guidelines.example.tsv`. Without it the report shows English CPIC/DPWG text |
+
+### Step 0: panel target BED (only without a capture-design BED)
+Our own panel BED is the Region Örebro län Twist design and is not in the repo. A BED from
+public sources only:
+
+```
+apptainer exec pharmcat_3.4.0.sif cat /pharmcat/pharmcat_positions.vcf > pharmcat_positions.vcf
+python3 config/panel/make_public_panel_bed.py --fai GRCh38_chr.fasta.fai \
+  --pharmcat-vcf pharmcat_positions.vcf \
+  --markers config/templates/snp_markers.example.tsv \
+  --starphase-db pbstarphase_20251002.json > public_panel_targets.bed
+python3 config/nallo/pad_bed.py public_panel_targets.bed 500 > public_panel_targets_pad500.bed
+```
+
+It contains every PharmCAT position and SNP marker ±100 bp, merged per gene, plus the whole
+CYP2D6 locus as StarPhase defines it (REP6 … CYP2D7, chr22:42,123,191–42,145,903). On
+GRCh38 that gives 243 targets, 92 kb. Give `public_panel_targets.bed` to nallo as
+`target_regions` and to pgx as `panel_coverage.target_bed`, and the `_pad500` file to nallo
+as `snv_call_regions`. It has no targets for ACE, TYMS or HLA (no PharmCAT positions or
+markers there).
+
+Tested 2026-10-28 on HG00276: with the public BED and generated PharmCAT positions on the
+pgx side, all PharmCAT results, the CYP2D6 call and the SNP section were identical to the
+run with the Örebro BED. The nallo step was not rerun; it used the existing Örebro-based
+output. Only the coverage colours differ, because the targets differ.
 
 ### Step 1: nallo
 Copy `config/nallo/params_ont_panel.yaml` and fill in the paths. Then:
@@ -203,20 +231,26 @@ Notes:
 
 ### Step 2: pgx
 In a run folder, create `samples.tsv` and `units.tsv` (`platform` = `ONT` or `PACBIO`) and
-a run config that switches the modules on. This is the HG00276 example, with paths
-shortened:
+a run config that switches the modules on. The old pgx code still reads its own reference
+files when the workflow starts, so the run folder also needs `config/` and `reference/`;
+link them to `.tests/integration/config` and `.tests/integration/reference`. The base config
+`config/config.yaml` has `/path/to/` placeholders, and the linked test config has paths from
+the development machine, so set every path below in your run config. This is
+the HG00276 example, with paths shortened:
 
 ```yaml
 samples: "samples.tsv"
 units: "units.tsv"
-starphase:  {enabled: true, bam_source: "nallo", nallo_outdir: "/path/nallo_results", nallo_alignment_format: "bam"}
+starphase:  {enabled: true, bam_source: "nallo", nallo_outdir: "/path/nallo_results", nallo_alignment_format: "bam",
+             container: "/path/starphase.sif", database: "/path/pbstarphase_20251002.json",
+             reference: "/path/GRCh38_chr.fasta"}
 pharmcat:   {enabled: true, container: "/path/pharmcat_3.4.0.sif", outside_call_genes: ["CYP2D6"],
              swedish_guidelines: "/path/swedish_guidelines.tsv", guideline_sources: ["CPIC", "DPWG"]}
 panel_coverage: {enabled: true, target_bed: "/path/panel_targets.bed",
-                 clinical_positions: "/path/pharmcat_3.4.0_positions.bed",
+                 clinical_positions: "pharmcat",
                  samtools: "/usr/bin/samtools", min_mapq: 0, thresholds: {ONT: [100, 50, 30, 1]}}
-snp_markers:     {enabled: true, table: "/path/snp_markers.tsv"}
-reference_calls: {enabled: true, positions: ["/path/pharmcat_3.4.0_positions.bed"],
+snp_markers:     {enabled: true, table: "/path/pgx/config/templates/snp_markers.example.tsv"}
+reference_calls: {enabled: true, positions: ["pharmcat"],
                   read_rule: {enabled: true, min_reads: 30, min_fraction: 0.95, min_mapq: 5}}
 ```
 
@@ -237,7 +271,9 @@ Unit tests (6 files, 43 tests):
 cd workflow/scripts && conda run -n pgx python -m unittest discover -p '*_test.py'
 ```
 
-Plain `python -m unittest` finds 0 tests. The integration test in `.tests/integration`
+Plain `python -m unittest` finds 0 tests. The helper scripts have their own tests:
+`config/adaptive_sampling/make_as_bed_test.py` and
+`config/panel/make_public_panel_bed_test.py` (run `python3 -m unittest` in each folder). The integration test in `.tests/integration`
 covers the original pgx path (StarPhase and the nallo modules disabled).
 
 ### Adaptive sampling BED (optional)
@@ -267,14 +303,18 @@ libraries, 20 kb for native gDNA). Not yet tested on a real run.
 
 **Report**
 - The read rule is shown only in the SNP section, not in the PharmCAT gene summary.
-- The Swedish guideline texts and the marker table are drafts.
+- The Swedish guideline texts and the marker table are drafts. The texts are not approved
+  by the interpretation group, and the CYP2D6 texts are not reviewed at all.
 - There is no "journal version" (genotypes without drug text).
 
 **Engineering**
-- `config/config.yaml` still has absolute paths from the development machine. Run configs
-  override them, but the defaults need placeholders before sharing.
-- The panel BED (Region Örebro län Twist design), marker table and Swedish texts are kept
-  outside the repo. It is not yet clear whether the panel design can be redistributed.
+- The Region Örebro län panel BED is not in the repo, because it is not yet clear whether
+  the design can be redistributed. The public BED (Step 0) is the substitute.
+- The run folder needs `config/` and `reference/` from the old pgx path even for the nallo
+  path (`common.smk` reads them at start-up).
+- `.tests/integration/config/config.yaml` still holds container paths from the development
+  machine (the integration test needs real paths). Change them to your own before running
+  the integration test.
 - Snakemake 7 does not rerun after a script edit, and does not rebuild a missing
   intermediate while the final report exists. Request the intermediate target explicitly.
   `--forcerun add_reference_calls` fails (MissingInputException in the old alignment
@@ -307,7 +347,6 @@ libraries, 20 kb for native gDNA). Not yet tested on a real run.
 - HLA validation before reporting HLA-A/B.
 - Journal version of the report.
 - Run on real hybrid-capture data (2027). Compare capture vs adaptive sampling vs both.
-- Replace machine-specific paths in `config/config.yaml` with placeholders.
 - Suggest to nallo (GMS) that the gVCF be published by default.
 - Longer term, only if StarPhase proves insufficient: an open-source ONT CYP2D6/CYP2D7
   resolver.
