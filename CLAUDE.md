@@ -162,12 +162,14 @@ Report rules decided by Lars-Ola:
 - **Read rule (2026-10-27):** where the caller is unsure, ≥ 95% normal reads with ≥ 30 reads counts as normal (`reference_calls.read_rule`). A read is normal if it has the reference at every base of the position and no insertion/deletion inside it. Marked INFO `PGX_READRULE`/`PGX_READS` in the VCF; the SNP section says "normal enligt läsandel (x % av n läsningar)", and the gene summary lists such PharmCAT positions per gene ("Normal enligt läsandel: rsID (x % av n läsningar)").
 - SNP section: genotype + zygosity + copies of the defining allele.
 - "Ej testade alleler" shown per gene.
+- **Off-target positions (2026-10-28):** the panel stays slim (MinION multiplexing). nallo's `snv_call_regions` = panel targets ±500 bp + every PharmCAT position/SNP marker ±100 bp (`config/nallo/pad_bed.py panel.bed 500 public_panel_targets.bed 0`). PharmCAT only gets the enriched region (targets ±`off_target.enriched_pad`, 500), so diplotypes are unchanged. Positions outside it are listed separately ("Utanför panelens mål", `off_target.smk`); below 30 reads what was found is still shown, in red ("Lågt läsdjup"); a variant there is flagged for manual review. HG00276: `~/projects/nallo_runs/hg00276_panel_wide` → `~/projects/pgx_runs/hg00276_nallo_wide`, results identical to the old run plus 32 off-target positions.
 - Not assessable is labelled by cause: "Ej bedömbar (lågt läsdjup)" = < 30 reads; "Ej bedömbar (osäkert anrop)" = ≥ 30 reads but the caller gave ./. (technical labelling, not a new threshold).
 - HLA not analysed (StarPhase HLA unvalidated).
 - English CPIC/DPWG text where no Swedish text exists.
 - Clinically relevant = ClinPGx level ≥ 3. All markers stay until the hybrid-capture runs show what can be called.
 
 Open items:
+- Untested alleles on HG00276 (analysed 2026-10-28) are mostly ONT noise at in-panel positions (59–94% normal reads, below the 95% read rule; DPYD, CYP2C9, CYP3A4, NUDT15, TPMT, SLCO1B1): not fixable by depth or design. Fixed: a rejected deletion RefCall one base earlier no longer hides a position (CYP3A4*13, CYP2C9*88).
 - IFNL4 ΔG (rs11322783) on HG00276 is still not assessable: only 84% of reads are normal across all three bases (ONT noise next to a G run). Same for 7 DPYD positions (82–90%).
 - review the marker table: scope of markers. (Clinical alleles #6/#13/#20/#31 approved 2026-10-28; #13 rs55965422 labelled "CYP3A5*3.005, tidigare *5", suballele number still to check against PharmVar. Possible later: flag rs55965422 without rs776746 on the same haplotype.)
 - HLA validation
