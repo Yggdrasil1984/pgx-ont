@@ -168,7 +168,7 @@ Report rules decided by Lars-Ola:
 Open items:
 - IFNL4 ΔG (rs11322783) on HG00276 is still not assessable: only 84% of reads are normal across all three bases (ONT noise next to a G run). Same for 7 DPYD positions (82–90%).
 - PharmCAT report: show which genes/positions were called by the read rule (only the SNP section says so today)
-- review the marker table: choice of clinical allele for #6/#13/#20/#31, scope of markers
+- review the marker table: scope of markers. (Clinical alleles #6/#13/#20/#31 approved 2026-10-28; #13 rs55965422 labelled "CYP3A5*3.005 (tidigare *5)", suballele number still to check against PharmVar. Possible later: flag rs55965422 without rs776746 on the same haplotype.)
 - HLA validation
 - "journal version" of the report (genotypes without drug text)
 - suggest to nallo (GMS) to publish the gVCF by default
