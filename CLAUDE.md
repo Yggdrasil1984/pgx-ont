@@ -153,6 +153,7 @@ Data kept outside the repo (drafts / local):
 - `~/reference/panel/pgx_panel_v2_targets.bed` — named panel targets (Region Örebro län Twist design TE-98775480).
 - `~/reference/panel/snp_markers_draft.tsv` — 37 non-PharmCAT markers with HGVS and `defining_allele`.
 - `~/reference/panel/pharmcat_3.4.0_positions.bed`.
+- Shareable versions in the repo (2026-10-28): `config/templates/snp_markers.example.tsv`, `config/templates/swedish_guidelines.draft.tsv` (interpretation group's draft shared with Lars-Ola's OK), `config/panel/make_public_panel_bed.py` (public panel BED; test run `~/projects/pgx_runs/hg00276_public` gave identical genotypes). `config/config.yaml` has `/path/to/` placeholders. `"pharmcat"` as `clinical_positions`/`positions` = BED generated from the container (`pharmcat_positions.smk`). Run folders link `config/` and `reference/` to `.tests/integration/` (the test config holds this machine's container paths).
 - `~/reference/panel/pgx_adaptive_sampling_flank5kb.bed` (capture libraries) and `..._flank20kb.bed` (native gDNA): MinKNOW adaptive-sampling targets, built with `config/adaptive_sampling/make_as_bed.py` from the panel BED + PharmCAT positions + SNP markers (2026-10-28). Use with the chr-prefixed GRCh38 in MinKNOW; nallo preset `ONT_R10_AS`. Comparison against hybrid capture planned.
 
 Report rules decided by Lars-Ola:
