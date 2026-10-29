@@ -2,7 +2,7 @@
 
 Branch `nanopore-adaptation` of [genomic-medicine-sweden/pgx](https://github.com/genomic-medicine-sweden/pgx).
 Maintainer: Lars-Ola Arvidsson, Region Halland. Status: development, **not validated for clinical use**.
-Last updated 2026-10-28.
+Last updated 2026-10-29.
 
 ![pgx metro map](images/pgx_metromap.png)
 
@@ -25,6 +25,7 @@ Output is one Swedish HTML report per sample:
 - the CYP2D6 call
 - plain genotypes for markers PharmCAT does not cover
 - read-depth QC per gene
+- PharmCAT positions outside the enriched panel region, listed separately
 
 **Hard constraint:** everything in the clinical path must be redistributable through GMS.
 Only MIT, GPL-3, Apache, BSD-style or MPL-2.0 licences are allowed.
@@ -68,16 +69,18 @@ Everything after nallo is platform-independent. The platform (`ONT` or `PACBIO` 
 | `pharmcat_positions.smk` | `pharmcat_positions_vcf`, `pharmcat_positions_bed` | Extracts PharmCAT's positions from the container in use; `"pharmcat"` in the config selects the BED | `results/gvcf/pharmcat_positions.vcf`, `.bed` |
 | `gvcf_reference_calls.smk` | `reference_positions`, `gvcf_expand`, `reference_pileup`, `add_reference_calls`, `bgzip_reference_calls` | Adds explicit 0/0 or ./. records at every PharmCAT and SNP-marker position the variant VCF lacks (see §3) | `results/gvcf/{s}_{t}.with_refcalls.vcf.gz` |
 | `snp_genotypes.smk` | `snp_genotypes` | Genotypes markers outside PharmCAT from a marker table (HGVS, zygosity, copies of the defining allele). Indels are normalised against the reference before matching | `results/snp/{s}_{t}.snp_genotypes.tsv` |
+| `off_target.smk` | `enriched_regions`, `pharmcat_enriched_vcf`, `pharmcat_allele_positions`, `off_target_calls` | Splits PharmCAT positions into enriched (panel targets ±`enriched_pad`, fed to PharmCAT) and outside (listed per position, see §3) | `results/pharmcat/{s}_{t}.enriched.vcf.gz`, `results/off_target/{s}_{t}.off_target.tsv` |
 | `pharmcat.smk` | `pharmcat_preprocess`, `pharmcat_outside_calls`, `pharmcat_run`, `generate_pharmcat_report` | PharmCAT in two stages, with StarPhase's CYP2D6 as an outside call, then the Swedish report | `results/pharmcat/*.json`, `results/report/{s}_{t}.pgx_report.html` |
 
 Include order in `workflow/Snakefile`: … `starphase_cyp2d6`, `pharmcat_positions`, `panel_coverage`,
-`gvcf_reference_calls`, `snp_genotypes`, `pharmcat`. All of them are off by default in
+`gvcf_reference_calls`, `snp_genotypes`, `off_target`, `pharmcat`. All of them are off by default in
 `config/config.yaml` and are switched on per run.
 
 Scripts are in `workflow/scripts/`:
 - `gvcf_reference_calls.py`
 - `panel_coverage.py`
 - `snp_genotypes.py`
+- `off_target_calls.py`, `pharmcat_allele_positions.py`
 - `generate_pharmcat_report.py`
 - `pharmcat_report_data.py`
 
@@ -88,6 +91,7 @@ sections:
 - Kliniska rekommendationer
 - CYP2D6
 - Övriga markörer
+- Utanför panelens mål (only with `off_target.enabled`)
 
 ### PharmCAT invocation
 
@@ -123,7 +127,13 @@ wanted position and adds one record per position that the variant VCF lacks:
 3. Otherwise → **./.**, reported as "not assessable" (label shows the cause: low depth or
    uncertain call).
 
-DeepVariant `RefCall` records with GT 0/0 are kept. `RefCall` ./. records at wanted
+In the PharmCAT gene summary, positions called by the read rule are listed per gene as
+"Normal enligt läsandel: rsID (x % av n läsningar)", in neutral bold, not as a warning.
+
+DeepVariant `RefCall` records with GT 0/0 are kept. A 0/0 record only vouches for the
+position it starts at: a rejected deletion one base earlier (e.g. AG>A at chr7:99762046)
+no longer hides the SNV at the next base. That had made CYP3A4\*13 and CYP2C9\*88
+disappear on HG00276; they now go through the read rule (85–86% normal, so still ./.). `RefCall` ./. records at wanted
 positions are replaced by the decision above. An attempt to also treat `RefCall` 0/0 as
 uncertain changed CYP2C9 calls on HG00276 and was reverted.
 
@@ -134,11 +144,48 @@ calls. That affected 43 positions. Reference records at indel positions therefor
 PharmCAT's own ALT alleles, read from `/pharmcat/pharmcat_positions.vcf` inside the
 container (rule `pharmcat_positions_vcf` in `pharmcat_positions.smk`).
 
-### SNV calling with ±500 bp padding
-nallo calls SNVs in the panel targets ±500 bp (`snv_call_regions`, made with
-`config/nallo/pad_bed.py`). Without padding:
+### SNV calling region: targets ±500 bp, plus every PharmCAT position ±100 bp
+nallo calls SNVs in `snv_call_regions`, made with `config/nallo/pad_bed.py`, which takes
+one or more BED/padding pairs:
+
+```
+python3 config/nallo/pad_bed.py panel_targets.bed 500 public_panel_targets.bed 0 > call_regions.bed
+```
+
+The ±500 bp around the panel targets is needed. Without padding:
 - CYP3A4\*2 (next to a target) was reported as \*1/\*1
 - UGT1A1\*28 was lost, because the indel's VCF anchor base lies outside the target
+
+The public BED (every PharmCAT position and SNP marker ±100 bp, Step 0) is added so that
+long reads reaching beyond the baits also get calls. On the Twist design this grows the
+calling region from 194 kb to 227 kb.
+
+### Off-target positions ("Utanför panelens mål")
+The panel is kept slim so that several samples fit on one MinION flow cell. PharmCAT
+therefore only gets positions in the **enriched region**: panel targets
+±`off_target.enriched_pad` bp (default 500, the same region as before), so diplotypes rest
+on enriched positions only. Every other PharmCAT position gets its own row in a separate
+report section, never fed into a diplotype:
+
+| Status | When |
+|---|---|
+| Variant | a call other than 0/0; flagged "kontrollera manuellt" |
+| Normal | 0/0 with ≥ 30 reads, or by the read rule |
+| Ej bedömbar (osäkert anrop) | ≥ 30 reads, but no confident call |
+| Lågt läsdjup | < 30 reads; still shows what was found (DeepVariant's genotype and share of normal reads), in red |
+| Ej anropad | reads, but outside nallo's calling region |
+| Ej täckt | no reads |
+
+Outside-call genes (CYP2D6) are skipped. Genes with no panel target at all (e.g. RYR1,
+CFTR on the Twist design) are listed only where reads exist. The alleles defined at each
+position are read from the allele definitions inside `pharmcat.jar`. The gene table
+links to the section ("Utanför panelen: n pos."). Requires `pharmcat`, `panel_coverage`
+and `reference_calls`; off by default.
+
+On HG00276 the PharmCAT result is identical with the section switched on; 32 positions
+are listed (CYP3A4 1, CYP4F2 9, G6PD 22; 7 G6PD positions with 12 reads shown as
+"Lågt läsdjup"). Those reads were extracted from WGS, so off-target depth on real capture
+data will be lower.
 
 ### Coverage colours (per platform, configurable)
 
@@ -205,7 +252,7 @@ It contains every PharmCAT position and SNP marker ±100 bp, merged per gene, pl
 CYP2D6 locus as StarPhase defines it (REP6 … CYP2D7, chr22:42,123,191–42,145,903). On
 GRCh38 that gives 243 targets, 92 kb. Give `public_panel_targets.bed` to nallo as
 `target_regions` and to pgx as `panel_coverage.target_bed`, and the `_pad500` file to nallo
-as `snv_call_regions`. It has no targets for ACE, TYMS or HLA (no PharmCAT positions or
+as `snv_call_regions` (or use the two-pair `pad_bed.py` form from §3). It has no targets for ACE, TYMS or HLA (no PharmCAT positions or
 markers there).
 
 Tested 2026-10-28 on HG00276: with the public BED and generated PharmCAT positions on the
@@ -253,6 +300,7 @@ panel_coverage: {enabled: true, target_bed: "/path/panel_targets.bed",
 snp_markers:     {enabled: true, table: "/path/pgx/config/templates/snp_markers.example.tsv"}
 reference_calls: {enabled: true, positions: ["pharmcat"],
                   read_rule: {enabled: true, min_reads: 30, min_fraction: 0.95, min_mapq: 5}}
+off_target:      {enabled: true, enriched_pad: 500}
 ```
 
 Then, from the run folder, dry-run first:
@@ -266,7 +314,7 @@ conda run -n pgx snakemake -s /path/pgx/workflow/Snakefile \
 Run the same command without `-n` for the real run. `--use-singularity` is required.
 
 ### Tests
-Unit tests (6 files, 43 tests):
+Unit tests (7 files, 54 tests):
 
 ```
 cd workflow/scripts && conda run -n pgx python -m unittest discover -p '*_test.py'
@@ -297,13 +345,17 @@ libraries, 20 kb for native gDNA). Not yet tested on a real run.
 - HiFi: thresholds are configured, but no HiFi sample has been run.
 
 **Calls not assessable on ONT (HG00276)**
+- Most "Ej testade alleler" are ONT noise at in-panel positions with plenty of reads
+  but only 59–94% normal reads (below the 95% rule; DPYD, CYP2C9, CYP3A4, NUDT15, TPMT,
+  SLCO1B1). More depth or a wider panel does not fix that.
 - IFNL4 rs11322783 (ΔG): DeepVariant gives ./. GQ 1, and only 84% of reads are normal
   across the three bases (ONT noise next to a G run).
 - 7 DPYD positions stay below the 95% rule: c.1682G>T, c.3049G>A, \*9B, c.1615G>A, c.61C>T,
   c.62G>A, c.632A>G (82–90% normal reads).
 
 **Report**
-- The read rule is shown only in the SNP section, not in the PharmCAT gene summary.
+- The read-rule footnote shows the default limits (95%, 30 reads), not the configured ones.
+- The SNP section is not split into enriched and off-target markers.
 - The Swedish guideline texts and the marker table are drafts. The texts are not approved
   by the interpretation group, and the CYP2D6 texts are not reviewed at all.
 - There is no "journal version" (genotypes without drug text).
@@ -341,7 +393,6 @@ libraries, 20 kb for native gDNA). Not yet tested on a real run.
 
 ## 7. To do
 
-- Show which positions were called by the read rule in the PharmCAT part of the report.
 - IFNL4 and the remaining DPYD positions: better ONT calling, or accept "not assessable".
 - Truth-set validation of non-CYP2D6 genes (GeT-RM / GIAB samples).
 - More CYP2D6 structural cases on ONT (duplications, CYP2D6/2D7 hybrids).
