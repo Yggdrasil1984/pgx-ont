@@ -314,7 +314,7 @@ conda run -n pgx snakemake -s /path/pgx/workflow/Snakefile \
 Run the same command without `-n` for the real run. `--use-singularity` is required.
 
 ### Tests
-Unit tests (7 files, 54 tests):
+Unit tests (7 files, 55 tests):
 
 ```
 cd workflow/scripts && conda run -n pgx python -m unittest discover -p '*_test.py'
@@ -354,7 +354,6 @@ libraries, 20 kb for native gDNA). Not yet tested on a real run.
   c.62G>A, c.632A>G (82–90% normal reads).
 
 **Report**
-- The read-rule footnote shows the default limits (95%, 30 reads), not the configured ones.
 - The SNP section is not split into enriched and off-target markers.
 - The Swedish guideline texts and the marker table are drafts. The texts are not approved
   by the interpretation group, and the CYP2D6 texts are not reviewed at all.
