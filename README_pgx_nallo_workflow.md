@@ -182,6 +182,13 @@ position are read from the allele definitions inside `pharmcat.jar`. The gene ta
 links to the section ("Utanför panelen: n pos."). Requires `pharmcat`, `panel_coverage`
 and `reference_calls`; off by default.
 
+SNP markers follow the same split: markers outside the enriched region get their own
+table in the SNP section ("Markörer utanför panelens mål"), with the same rules. Their
+depth comes from the read-rule pileup, because `samtools depth` only covers the panel
+targets. On the Twist design all 37 markers lie inside the targets, so the table is empty
+there. A test with the MTHFR, F2, F5 and ALDH2 targets removed listed those 5 markers with
+the same genotypes as before (MTHFR c.1286A>C heterozygous, flagged for review).
+
 On HG00276 the PharmCAT result is identical with the section switched on; 32 positions
 are listed (CYP3A4 1, CYP4F2 9, G6PD 22; 7 G6PD positions with 12 reads shown as
 "Lågt läsdjup"). Those reads were extracted from WGS, so off-target depth on real capture
@@ -314,7 +321,7 @@ conda run -n pgx snakemake -s /path/pgx/workflow/Snakefile \
 Run the same command without `-n` for the real run. `--use-singularity` is required.
 
 ### Tests
-Unit tests (7 files, 55 tests):
+Unit tests (7 files, 56 tests):
 
 ```
 cd workflow/scripts && conda run -n pgx python -m unittest discover -p '*_test.py'
@@ -354,7 +361,6 @@ libraries, 20 kb for native gDNA). Not yet tested on a real run.
   c.62G>A, c.632A>G (82–90% normal reads).
 
 **Report**
-- The SNP section is not split into enriched and off-target markers.
 - The Swedish guideline texts and the marker table are drafts. The texts are not approved
   by the interpretation group, and the CYP2D6 texts are not reviewed at all.
 - There is no "journal version" (genotypes without drug text).
