@@ -177,6 +177,8 @@ if _pharmcat_enabled:
             thresholds = panel_coverage_thresholds,
             sources    = config["pharmcat"].get("guideline_sources", ["CPIC", "DPWG"]),
             enriched_pad = config.get("off_target", {}).get("enriched_pad", 500),
+            read_rule    = {"min_reads": config.get("reference_calls", {}).get("read_rule", {}).get("min_reads", 30),
+                            "min_fraction": config.get("reference_calls", {}).get("read_rule", {}).get("min_fraction", 0.95)},
         log:
             "logs/report/{sample}_{type}_pgx_report.log",
         script:

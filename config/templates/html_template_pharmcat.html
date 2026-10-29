@@ -700,7 +700,7 @@ Där svensk text saknas visas CPIC/DPWG-riktlinjer på engelska. HLA-A och HLA-B
 <p class="muted" style="font-size:0.85em;">
 Läsdjup visar sämsta färg bland genens mål, bedömt vid de kliniska positionerna i varje mål.
 "Ej testade alleler" kunde inte bedömas (positionen saknas eller har för lågt läsdjup); diplotypen utesluter dem inte.
-"Normal enligt läsandel": varianten anropades inte säkert, men tillräckligt stor andel av läsningarna visade normal sekvens (läsandelsregeln, standard minst 95 % av minst 30 läsningar), så positionen räknas som normal.
+"Normal enligt läsandel": varianten anropades inte säkert, men tillräckligt stor andel av läsningarna visade normal sekvens (läsandelsregeln: minst {{ "%.0f"|format(read_rule_limits.min_fraction * 100) }} % av minst {{ read_rule_limits.min_reads }} läsningar), så positionen räknas som normal.
 För CYP2D6 halveras läsdjupet vid en gendeletion (*5); läs det tillsammans med kopienumret nedan.
 </p>
 </div>

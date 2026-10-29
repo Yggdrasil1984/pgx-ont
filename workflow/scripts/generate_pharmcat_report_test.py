@@ -46,5 +46,21 @@ class TestAddCoverage(unittest.TestCase):
         self.assertEqual(calls[0]["status"], prd.STATUS_NOT_ANALYSED)
 
 
+class TestReadRuleFootnote(unittest.TestCase):
+
+    def test_footnote_shows_configured_limits(self):
+        import os
+        import re
+        import jinja2
+        template = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "../../config/templates/html_template_pharmcat.html")
+        with open(template, encoding="utf-8") as fh:
+            src = fh.read()
+        line = next(l for l in src.splitlines() if "läsandelsregeln" in l)
+        text = jinja2.Template(line).render(read_rule_limits={"min_reads": 40, "min_fraction": 0.9})
+        self.assertIn("minst 90 % av minst 40 läsningar", text)
+        self.assertIsNone(re.search(r"\b95 %", text))
+
+
 if __name__ == "__main__":
     unittest.main()

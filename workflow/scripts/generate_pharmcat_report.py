@@ -88,7 +88,8 @@ def group_off_target(rows):
 
 def build_report(phenotype_json, report_json, match_json, swedish_tsv, starphase_csv, starphase_json,
                  coverage_tsv, template, sample, platform, thresholds,
-                 not_analysed=("HLA-A", "HLA-B"), sources=("CPIC", "DPWG"), snp_tsv=None, vcf=None, off_target_tsv=None, enriched_pad=500):
+                 not_analysed=("HLA-A", "HLA-B"), sources=("CPIC", "DPWG"), snp_tsv=None, vcf=None, off_target_tsv=None, enriched_pad=500,
+                 read_rule_limits=None):
     gene_calls = prd.load_gene_calls(phenotype_json, not_analysed=set(not_analysed))
     coverage = read_coverage(coverage_tsv)
     gene_calls = add_coverage(gene_calls, coverage)
@@ -136,6 +137,7 @@ def build_report(phenotype_json, report_json, match_json, swedish_tsv, starphase
             snps=read_snp_results(snp_tsv) if snp_tsv else [],
             off_target=off_target,
             enriched_pad=enriched_pad,
+            read_rule_limits=read_rule_limits or {"min_reads": 30, "min_fraction": 0.95},
         )
     return html
 
@@ -158,6 +160,7 @@ if __name__ == "__main__":
         vcf=getattr(snakemake.input, "vcf", None),
         off_target_tsv=getattr(snakemake.input, "off_target", None),
         enriched_pad=snakemake.params.enriched_pad,
+        read_rule_limits=snakemake.params.read_rule,
     )
     with open(snakemake.output.html, "w", encoding="utf-8") as fh:
         fh.write(html)
