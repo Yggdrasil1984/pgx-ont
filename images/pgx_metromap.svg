@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 2300 920" width="2300" height="920">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 2300 1070" width="2300" height="1070">
   <title>pgx metro map: nallo → StarPhase → PharmCAT → Swedish report</title>
   <defs>
     <style>
@@ -28,7 +28,7 @@
     </g>
   </defs>
 
-  <rect width="2300" height="920" fill="#fff"/>
+  <rect width="2300" height="1070" fill="#fff"/>
 
   <!-- ───────── boxes ───────── -->
   <rect class="box" x="160" y="30" width="740" height="210" rx="10"/>
@@ -55,7 +55,10 @@
   <rect class="box" x="1500" y="572" width="380" height="128" rx="10"/>
   <text class="title" x="1518" y="604">SNP markers</text>
 
-  <rect class="box" x="1920" y="30" width="270" height="670" rx="10"/>
+  <rect class="box" x="1500" y="720" width="380" height="150" rx="10"/>
+  <text class="title" x="1518" y="752">off-target positions</text>
+
+  <rect class="box" x="1920" y="30" width="270" height="840" rx="10"/>
   <text class="title" x="1938" y="62">report</text>
 
   <!-- ───────── lines (drawn under stations) ───────── -->
@@ -79,6 +82,7 @@
   <path class="line variants" d="M1060,560 H1258 Q1288,560 1288,530 V470"/>
   <path class="line variants" d="M1300,456 H1380 Q1410,456 1410,486 V610 Q1410,640 1440,640 H1700"/>
   <path class="line variants" d="M1600,456 H1800"/>
+  <path class="line variants" d="M1410,600 V775 Q1410,805 1440,805 H1700"/>
   <!-- pileup, depth, outside call -->
   <path class="line files" d="M1060,640 H1282 Q1312,640 1312,610 V470"/>
   <path class="line files" d="M1060,130 H2010 Q2040,130 2040,160 V443"/>
@@ -87,6 +91,7 @@
   <!-- results -->
   <path class="line results" d="M1800,456 H2185"/>
   <path class="line results" d="M1700,640 H2010 Q2040,640 2040,610 V469"/>
+  <path class="line results" d="M1700,805 H2010 Q2040,805 2040,775 V630"/>
 
   <!-- ───────── inputs and outputs ───────── -->
   <use href="#bar" x="100" y="170"/>
@@ -117,6 +122,7 @@
 
   <use href="#station" x="520" y="208"/>
   <text class="lbl" x="545" y="215">pad_bed.py ±500 bp</text>
+  <text class="small" x="545" y="236">+ PharmCAT positions ±100 bp</text>
 
   <use href="#station" x="300" y="450"/>
   <text class="lbl mid" x="300" y="492">minimap2</text>
@@ -143,8 +149,11 @@
   <use href="#station" x="1300" y="456"/>
   <text class="lbl mid" x="1300" y="430">add reference calls</text>
 
-  <use href="#station" x="1600" y="456"/>
-  <text class="lbl mid" x="1600" y="498">preprocessor</text>
+  <use href="#station" x="1545" y="456"/>
+  <text class="lbl" x="1518" y="414">enriched only</text>
+  <text class="small" x="1518" y="434">targets ±500 bp</text>
+  <use href="#station" x="1665" y="456"/>
+  <text class="lbl mid" x="1665" y="498">preprocessor</text>
   <use href="#station" x="1800" y="456"/>
   <text class="lbl mid" x="1800" y="498">PharmCAT</text>
   <text class="small mid" x="1800" y="520">CPIC · DPWG</text>
@@ -152,12 +161,16 @@
   <use href="#station" x="1700" y="640"/>
   <text class="lbl mid" x="1700" y="682">snp_genotypes</text>
 
+  <use href="#station" x="1700" y="805"/>
+  <text class="lbl mid" x="1700" y="847">off_target_calls</text>
+  <text class="small" x="1518" y="778">alleles per position from pharmcat.jar</text>
+
   <use href="#station" x="2040" y="456"/>
   <text class="lbl" x="2062" y="500">Swedish</text>
   <text class="lbl" x="2062" y="524">report</text>
 
   <!-- ───────── legend and footer ───────── -->
-  <g transform="translate(178,760)">
+  <g transform="translate(178,910)">
     <path class="line regions" d="M0,0 H60"/><text class="lbl" x="76" y="7">regions</text>
     <path class="line reads" d="M260,0 H320"/><text class="lbl" x="336" y="7">unaligned reads</text>
     <path class="line aligned" d="M560,0 H620"/><text class="lbl" x="636" y="7">aligned reads</text>
@@ -167,6 +180,6 @@
     <path class="line regions alt" d="M560,44 H620"/><text class="lbl" x="636" y="51">optional path</text>
     <rect class="upstream" x="860" y="30" width="60" height="28" rx="5"/><text class="lbl" x="936" y="51">upstream (nallo)</text>
   </g>
-  <text class="small" x="178" y="870">pgx · branch nanopore-adaptation · Region Halland · 2026-10-28</text>
-  <text class="small" x="178" y="894">Licences: nallo MIT · StarPhase BSD-3-Clause-Clear · PharmCAT MPL-2.0 · pgx GPL-3</text>
+  <text class="small" x="178" y="1020">pgx · branch nanopore-adaptation · Region Halland · 2026-10-29</text>
+  <text class="small" x="178" y="1044">Licences: nallo MIT · StarPhase BSD-3-Clause-Clear · PharmCAT MPL-2.0 · pgx GPL-3</text>
 </svg>
