@@ -65,7 +65,11 @@ if _off_target_enabled:
             "logs/pharmcat/{sample}_{type}_enriched_vcf.log",
         shell:
             """
-            apptainer exec {params.sif} bcftools view -T {input.bed} -Oz -o {output.vcf} {input.vcf} > {log} 2>&1
+            # PharmCAT's preprocessor indexes its input in place; a stale .csi
+            # from an earlier run points into the old file, so write a fresh one
+            rm -f {output.vcf}.csi {output.vcf}.tbi
+            (apptainer exec {params.sif} bcftools view -T {input.bed} -Oz -o {output.vcf} {input.vcf} &&
+             apptainer exec {params.sif} bcftools index -f {output.vcf}) > {log} 2>&1
             """
 
     rule pharmcat_allele_positions:
