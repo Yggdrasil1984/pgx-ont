@@ -36,6 +36,12 @@ if _snp_markers_enabled:
             vcf     = pharmcat_vcf,
             depth   = "results/coverage/{sample}_{type}.panel_depth.tsv.gz",
             ref     = config["starphase"]["reference"],   # indel normalisation
+            # off_target enabled: markers outside the enriched region are
+            # labelled and follow the off-target rule (off_target.smk)
+            **({"enriched": "results/pharmcat/enriched_regions.bed",
+                "gvcf":     "results/gvcf/{sample}_{type}.gvcf_expanded.vcf.gz",
+                "pileup":   "results/gvcf/{sample}_{type}.reference_pileup.tsv.gz"}
+               if config.get("off_target", {}).get("enabled", False) else {}),
         output:
             tsv = "results/snp/{sample}_{type}.snp_genotypes.tsv",
         params:

@@ -50,6 +50,29 @@ class TestSnpGenotypes(unittest.TestCase):
         self.assertEqual(rows["rs6025"]["hgvsp"], "p.Arg534Gln")
         self.assertEqual(rows["rs6025"]["hgvsg"], "NC_000001.11:g.100C>T")
 
+    def test_off_target_markers(self):
+        # enriched region covers only F5 (chr1:100); MTHFR/F2/ALDH2 lie outside
+        enriched = {"chr1": [(50, 150)]}
+        support = {("chr1", 199, 200): (40, 20), ("chr11", 299, 300): (12, 12), ("chr12", 399, 400): (50, 50)}
+        depths = sg.off_target_depths(self.markers, {("chr1", 100): 80}, enriched, support)
+        self.assertEqual((depths[("chr1", 100)], depths[("chr11", 300)]), (80, 12))
+        vcf_records = {("chr1", 200): ("G", ["A"], "0/1", ".")}
+        rows = sg.genotype_markers(self.markers, vcf_records, depths, ONT)
+        # otc.read_vcf format: (alleles, gt indices, sep, depth, info)
+        raw = {("chr11", 300): (["G"], [0, 0], "/", 12, ".")}
+        rows = {r["rsid"]: r for r in sg.mark_off_target(
+            rows, self.markers, enriched, {}, raw, support, ONT)}
+        self.assertEqual(rows["rs6025"]["enriched"], "ja")
+        # variant outside: normal rules, flagged for manual review
+        self.assertEqual((rows["rs1801133"]["enriched"], rows["rs1801133"]["result"]), ("nej", sg.HETEROZYGOUS))
+        self.assertIn("kontrollera manuellt", rows["rs1801133"]["note"])
+        # 12 reads: what was found is shown, as low depth, red
+        f2 = rows["rs1799963"]
+        self.assertEqual((f2["result"], f2["genotype"], f2["depth"], f2["colour"]), (sg.LOW_DEPTH, "G/G", 12, "red"))
+        self.assertIn("12 av 12 läsningar normala", f2["note"])
+        # no record but 50 reads from the pileup: reference by the usual depth rule
+        self.assertEqual((rows["rs671"]["genotype"], rows["rs671"]["depth"]), ("G/G", 50))
+
     def test_homozygous(self):
         rows = self._results({("chr1", 200): ("G", ["A"], "1/1")}, {("chr1", 200): 60})
         self.assertEqual(rows["rs1801133"]["result"], sg.HOMOZYGOUS)

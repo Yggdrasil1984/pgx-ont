@@ -644,7 +644,7 @@ color: #faa21a;
     <li><a href="#svenska-rekommendationer">Kliniska rekommendationer (svenska)</a></li>
     <li><a href="#engelska-rekommendationer">Riktlinjer CPIC/DPWG (engelska)</a></li>
     <li><a href="#CYP2D6">CYP2D6</a></li>
-    {% if snps %}<li><a href="#ovriga-markorer">Övriga markörer</a></li>{% endif %}
+    {% if snps or snps_off %}<li><a href="#ovriga-markorer">Övriga markörer</a></li>{% endif %}
     {% if off_target %}<li><a href="#utanfor-panelen">Utanför panelens mål</a></li>{% endif %}
     <li><a href="#lasdjup">Läsdjup per mål</a></li>
     </ul>
@@ -770,7 +770,23 @@ dupliceringar och CYP2D6/CYP2D7-hybrider). Resultatet förs in i PharmCAT som ex
 </p>
 </div>
 
-{% if snps %}
+{% macro snp_rows(rows) %}
+{% for s in rows %}
+<tr>
+  <td><strong>{{ s.gene }}</strong></td>
+  <td>{{ s.rsid }}</td>
+  <td>{{ s.transcript }}</td>
+  <td>{{ s.hgvsc }}</td>
+  <td>{{ s.hgvsp }}</td>
+  <td>{{ s.hgvsg }}</td>
+  <td><strong>{{ s.genotype }}</strong></td>
+  <td>{% if s.result.startswith("Ej") or s.result == "Lågt läsdjup" %}<span class="flag">{{ s.result }}</span>{% else %}{{ s.result }}{% endif %}{% if s.note %}<br><span class="muted">{{ s.note }}</span>{% endif %}</td>
+  <td>{{ s.defining_allele }}{% if s.defining_name %} ({{ s.defining_name }}){% endif %}{% if s.copies != "" %}: <strong>{{ s.copies }}</strong>{% endif %}</td>
+  <td><span class="cov cov-{{ s.colour }}">{{ s.depth }}</span></td>
+</tr>
+{% endfor %}
+{% endmacro %}
+{% if snps or snps_off %}
 <div id="ovriga-markorer" class="section level1">
 <h1>Övriga markörer (SNP-genotyper)</h1>
 <p class="muted" style="font-size:0.85em;">
@@ -781,25 +797,28 @@ Definierande allel är den allel som markören avser (kan vara referensbasen, t.
 HGVS anges för den icke-referensallel som påvisats, annars för den testade varianten.
 Med läsdjup &lt; {{ thresholds[2] }} eller osäkert anrop anges positionen som ej bedömbar.
 </p>
+{% if snps %}
 <table class="table table-striped" style="margin-left:auto;margin-right:auto;">
 <thead><tr><th>Gen</th><th>rsID</th><th>Transkript</th><th>HGVS c.</th><th>HGVS p.</th><th>HGVS g.</th><th>Genotyp</th><th>Zygositet</th><th>Definierande allel (kopior)</th><th>Läsdjup</th></tr></thead>
 <tbody>
-{% for s in snps %}
-<tr>
-  <td><strong>{{ s.gene }}</strong></td>
-  <td>{{ s.rsid }}</td>
-  <td>{{ s.transcript }}</td>
-  <td>{{ s.hgvsc }}</td>
-  <td>{{ s.hgvsp }}</td>
-  <td>{{ s.hgvsg }}</td>
-  <td><strong>{{ s.genotype }}</strong></td>
-  <td>{% if s.result.startswith("Ej") %}<span class="flag">{{ s.result }}</span>{% else %}{{ s.result }}{% endif %}{% if s.note %}<br><span class="muted">{{ s.note }}</span>{% endif %}</td>
-  <td>{{ s.defining_allele }}{% if s.defining_name %} ({{ s.defining_name }}){% endif %}{% if s.copies != "" %}: <strong>{{ s.copies }}</strong>{% endif %}</td>
-  <td><span class="cov cov-{{ s.colour }}">{{ s.depth }}</span></td>
-</tr>
-{% endfor %}
+{{ snp_rows(snps) }}
 </tbody>
 </table>
+{% endif %}
+{% if snps_off %}
+<h2 id="ovriga-markorer-utanfor">Markörer utanför panelens mål</h2>
+<p class="muted" style="font-size:0.85em;">
+Markörer utanför de anrikade regionerna (panelens mål &plusmn; {{ enriched_pad }} bp), redovisade som bonusfynd med samma regler.
+Läsdjupet räknas från läsningarna vid positionen. Med läsdjup &lt; {{ thresholds[2] }} visas ändå vad som hittades (rött, "Lågt läsdjup");
+det är inte ett säkert anrop. En variant här ska bekräftas innan den används kliniskt.
+</p>
+<table class="table table-striped" style="margin-left:auto;margin-right:auto;">
+<thead><tr><th>Gen</th><th>rsID</th><th>Transkript</th><th>HGVS c.</th><th>HGVS p.</th><th>HGVS g.</th><th>Genotyp</th><th>Zygositet</th><th>Definierande allel (kopior)</th><th>Läsdjup</th></tr></thead>
+<tbody>
+{{ snp_rows(snps_off) }}
+</tbody>
+</table>
+{% endif %}
 </div>
 {% endif %}
 

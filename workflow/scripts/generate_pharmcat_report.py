@@ -121,6 +121,8 @@ def build_report(phenotype_json, report_json, match_json, swedish_tsv, starphase
     with open(starphase_json) as fh:
         starphase_version = json.load(fh).get("pbstarphase_version", "")
 
+    snps = read_snp_results(snp_tsv) if snp_tsv else []
+
     with open(template, encoding="utf-8") as fh:
         html = jinja2.Template(fh.read()).render(
             sample=sample,
@@ -134,7 +136,8 @@ def build_report(phenotype_json, report_json, match_json, swedish_tsv, starphase
             english=english,
             cyp2d6=load_cyp2d6_result(starphase_csv),
             coverage=coverage,
-            snps=read_snp_results(snp_tsv) if snp_tsv else [],
+            snps=[s for s in snps if s.get("enriched") != "nej"],
+            snps_off=[s for s in snps if s.get("enriched") == "nej"],
             off_target=off_target,
             enriched_pad=enriched_pad,
             read_rule_limits=read_rule_limits or {"min_reads": 30, "min_fraction": 0.95},

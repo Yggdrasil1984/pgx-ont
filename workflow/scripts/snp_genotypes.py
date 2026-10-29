@@ -31,6 +31,12 @@ Rules (decided by Lars-Ola 2026-10-22 and 2026-10-26):
     the way `bcftools norm` does (trim shared bases, add the anchor base,
     left-align against the reference). A different variant overlapping the
     marker gives "Ej bedömbar", note "annan variant vid markören"
+  - with off_target enabled (Lars-Ola 2026-10-29), markers outside the
+    enriched region (panel targets +/- off_target.enriched_pad) are labelled
+    enriched = "nej" and reported in their own table. Their depth comes from
+    the read-rule pileup (samtools depth only covers the targets); below the
+    depth limit what was found is shown ("Lågt läsdjup", red), and a variant
+    gets "kontrollera manuellt", as for off-target PharmCAT positions
 """
 
 import csv
@@ -296,6 +302,54 @@ def genotype_markers(markers, vcf_records, depths, thresholds, fetch=None):
     return results
 
 
+LOW_DEPTH = "Lågt läsdjup"
+OFF_TARGET_VARIANT_NOTE = "utanför panelens mål: kontrollera manuellt"
+
+
+def _span(marker):
+    return (marker["chrom"], marker["pos"] - 1, marker["pos"])
+
+
+def off_target_depths(markers, depths, enriched, support):
+    """Depths with off-target markers taken from the read-rule pileup.
+
+    samtools depth (panel_depth) only covers the panel targets, so a marker
+    outside them would otherwise always show 0 reads."""
+    from off_target_calls import inside
+    merged = dict(depths)
+    for m in markers:
+        key = (m["chrom"], m["pos"])
+        if not inside(enriched, *key):
+            merged[key] = max(depths.get(key, 0), support.get(_span(m), (0, 0))[0])
+    return merged
+
+
+def mark_off_target(results, markers, enriched, vcf, raw, support, thresholds):
+    """Label each result enriched ("ja"/"nej"); for off-target markers apply the
+    off-target rule (Lars-Ola 2026-10-28): same rules, but below the depth limit
+    show what was found ("Lågt läsdjup", red) instead of "Ej bedömbar", and
+    flag a variant for manual review. vcf/raw as off_target_calls.read_vcf."""
+    from off_target_calls import classify, inside, VARIANT, LOW_DEPTH as OT_LOW
+    min_depth = thresholds[2]
+    for m, r in zip(markers, results):
+        key = (m["chrom"], m["pos"])
+        if inside(enriched, *key):
+            r["enriched"] = "ja"
+            continue
+        r["enriched"] = "nej"
+        if r["result"] == NOT_ASSESSABLE:
+            genotype, depth, status, note = classify(
+                m["pos"], vcf.get(key), raw.get(key), support.get(_span(m), (0, 0)), min_depth)
+            if status in (OT_LOW, VARIANT) and depth < min_depth:
+                r.update(result=LOW_DEPTH, genotype=genotype, copies="", depth=depth,
+                         colour=depth_colour(depth, thresholds),
+                         note=(note + "; " if note else "") + ("kontrollera manuellt" if status == VARIANT else ""))
+                r["note"] = r["note"].rstrip("; ")
+        elif r["genotype"] and any(b != m["ref"] for b in r["genotype"].replace("|", "/").split("/")):
+            r["note"] = (r["note"] + "; " if r["note"] else "") + OFF_TARGET_VARIANT_NOTE
+    return results
+
+
 def write_tsv(rows, path):
     with open(path, "w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=list(rows[0]) if rows else ["gene"],
@@ -311,11 +365,21 @@ def read_results(path):
 
 if __name__ == "__main__":
     markers = load_markers(snakemake.input.markers)
-    write_tsv(
-        genotype_markers(markers,
-                         read_vcf(snakemake.input.vcf, markers),
-                         read_depths(snakemake.input.depth, markers),
-                         snakemake.params.thresholds,
-                         fetch=Fasta(snakemake.input.ref).fetch),
-        snakemake.output.tsv,
-    )
+    depths = read_depths(snakemake.input.depth, markers)
+    enriched_bed = getattr(snakemake.input, "enriched", None)
+    if enriched_bed:
+        import off_target_calls as otc
+        from gvcf_reference_calls import read_support
+        enriched, _ = otc.read_regions(enriched_bed)
+        support = read_support(snakemake.input.pileup, [_span(m) for m in markers])
+        depths = off_target_depths(markers, depths, enriched, support)
+    results = genotype_markers(markers,
+                               read_vcf(snakemake.input.vcf, markers),
+                               depths,
+                               snakemake.params.thresholds,
+                               fetch=Fasta(snakemake.input.ref).fetch)
+    if enriched_bed:
+        results = mark_off_target(results, markers, enriched,
+                                  otc.read_vcf(snakemake.input.vcf), otc.read_vcf(snakemake.input.gvcf),
+                                  support, snakemake.params.thresholds)
+    write_tsv(results, snakemake.output.tsv)
